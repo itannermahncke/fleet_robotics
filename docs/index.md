@@ -33,7 +33,7 @@ Instead, we pivoted to using a shell script to bring up all our Neatos. Shell sc
 
 #### Exploring Sensor Fusion
 
-We plan to implement visual-inertial odometry -- combine our robot's odometry-based pose estimates with visual odometry -- for highly accurate pose estimates. We think that this will require the use of a Kalman filter, which will allow continual visual updates to minimize the error in our native odometry. We found the following library, which simplifies the implementation of a Kalman filter.
+We plan to implement visual-inertial odometry -- combine our robot's odometry-based pose estimates with visual odometry -- for highly accurate pose estimates. We think that this will require the use of a Kalman filter, which will allow continual visual updates to minimize the error in our native odometry. We found [this library](https://filterpy.readthedocs.io/en/latest/kalman/KalmanFilter.html), which simplifies the implementation of a Kalman filter.
 
 One thing we need to consider is that Neato odometry is not the same as having inertial data from something like an IMU. We'll need to find more examples of how others have implemented visual-inertial odometry, but [this article](https://www.thinkautonomous.ai/blog/visual-inertial-odometry/) was a helpful first step, and made it seem like the regular Neato odometry would be just fine.
 
