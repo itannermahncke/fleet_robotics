@@ -3,11 +3,12 @@
 ### Contributors: Ivy, Vivian, Ariel, Charlie
 
 # Abstract
-This project aims to develop and implement a control system for a fleet of mobile robots, leveraging sensor fusion techniques for autonomous navigation and collision avoidance. The system combines internal odometry data from Neato robots (using ROS 2) with visual odometry derived from embedded cameras. By fusing these two pose estimates, the robots can adjust their velocities to achieve more accurate localization and movement.
+This project aims to develop and implement a control system for a fleet of robots, integrating sensor fusion techniques, and multi-agent communication for autonomous fleet navigation. 
 
-The final phase involves a demonstration of local path planning and inter-robot communication. Two Neato robots will start at a designated point at the start line and race to a pre-defined end point, initially following hard-coded paths designed to provoke a collision. A subsequent implementation, once each robot has updated the shared map with their predicted path, introduces an adjusted path planner. Each robot will then dynamically prioritize actions based on a hierarchy system, deciding whether to stop, wait, or replan its trajectory to avoid collisions while maintaining efficient navigation.
+The system combines internal odometry data from Neato robots (using ROS 2) with visual odometry derived from embedded cameras. By fusing these two pose estimates, the robots can adjust their velocities to achieve more accurate localization and movement.
 
-This work contributes to the study of autonomous robotic systems, highlighting the integration of sensor fusion, local path planning, and multi-agent communication for safe and coordinated fleet operations.
+The final product involves a demonstration of a decentraized path planning algortihm and inter-robot communication. Two Neato robots will start at a designated point at the start line and race to a pre-defined end point, initially following hard-coded paths designed to provoke a collision. A subsequent implementation, once each robot has updated the shared map with their predicted path, introduces an adjusted path planner. Each robot will then dynamically prioritize actions based on a hierarchy system, deciding whether to stop, wait, or replan its trajectory to avoid collisions while maintaining efficient navigation.
+
 
 ### Milestone 1
 
@@ -25,11 +26,23 @@ We initially created a ROS2 launch file that called the existing `bringup_multi.
 
 Instead, we pivoted to using a shell script to bring up all our Neatos. Shell scripts will accept a nonconstant number of arguments, so as long as you are confident about what they will represent, you can use them. In our case, we wrote a shell script that accepted an argument for the number of Neatos to launch, and then that same number of IP addresses. The script uses these arguments to run `bringup_multi.py` as many times as was requested. This file is currently a draft that we plan to test after the break.
 
-#### Simple Visual Odometry
+#### Visual Odometry Implementation
 
-- found an example to replicate
-- did camera calibration
-- realized we needed to generate a depth map (list options we are exploring to circumvent or solve this problem)
+The sensor fusion aspect of this project consists of combining the Neato's internal odometry and visual odmetry to fuse into one highly accurate pose estimate. The internal odometry can easily be accessed through the ROS2 odom topic. The visual odometry consists of the following high level steps:
+- Input a dataset of frame-by-frame images in RGB and gray scale
+- Feature extraction
+- Feature matching & filtering by distance
+- Estimate motion with subsequent frames
+- Visualize trajectory in a map with estimated motion path
+
+Because our project focus was not on visual odometry, we decided to implement this with OpenCV algorithms. In a past project, we had already implemented this process through a juypter notebook for a given self-driving image dataset, so we tweaked the code to allow input from any source and performed our own camera calibration to get a matrix. In the `visual_odom_tutorial.ipynb` file, there are links to the OpenCV functions we used and thoroughly documented steps to how this is implemented.
+
+A possible challenge we haven't tested yet will be figuring out how to run this live as the Neato is taking photos of its current state. 
+
+Another issue we encountered was generating depth maps. To estimate the motion between each image, requires a depth map, which then requires a stereo camera which takes a second image at a slightly different angle. Adding in a stereo camera would be an extra step towards our goal for this project with additional complexities. Below are our next steps on following ideas to solve this problem:
+
+- Use Essential Matrix Decomposition 
+- Create a depth map with each image frame rather than stereo camera
 
 #### Exploring Sensor Fusion
 
@@ -39,6 +52,6 @@ One thing we need to consider is that Neato odometry is not the same as having i
 
 #### Next Steps
 
-All in all, we met all of our sprint goals (though we did get snagged by the last-minute discovery about depth maps).
+All of our Sprint 1 goals were met, though we made the last-minute discovery about depth maps.
 
 Our sprint goals for next week therefore remain generally unchanged: we want to get visual odometry wrapped in a ROS2 node that works with a live Neato, and we want to integrate that visual odometry data with Neato odometry data using a Kalman Filter to produce a high-quality pose estimate. Additionally, we want to spend significantly more time researching our options for path-planning and come to a final decision about whether or not we should pursue decentralized path-planning. Finally, we want to test our launching shell script on four real Neatos.
