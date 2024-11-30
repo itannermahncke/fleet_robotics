@@ -37,10 +37,10 @@ class NeatoFleetDatatsetHander:
         self.depth_maps = []
 
 
-        # Camera Calibration Matrix
-        self.k = np.array([[640, 0, 640],
-                           [0, 480, 480],
-                           [0,   0,   1]], dtype=np.float32)
+        # Neato Camera Calibration Matrix
+        self.k = np.array([[500.68763, 0.0, 378.6717,],
+              [0.0, 501.1204 , 207.83452,],
+              [0.0, 0.0, 1.0]], dtype=np.float32)
 
         # Read first frame
         self.read_frame()
@@ -78,6 +78,87 @@ class NeatoFleetDatatsetHander:
                 dtype=np.float64) * 1000.0
             self.depth_maps.append(depth)
             print ("Data loading: {0}%".format(int(i / (self.num_frames * 2 - 1) * 100)), end="\r")
+
+    def extract_features(self, image):
+        """
+        Find keypoints and descriptors for each image in the dataset
+
+        Arguments:
+        image -- an image
+
+        Returns:
+        kp -- a list of keypoints for the image
+        des -- a list of descriptors for the image
+        """
+        # Create SIFT object
+        sift = cv2.xfeatures2d.SIFT_create()
+        kp, des = sift.detectAndCompute(image, None)
+
+        
+        return kp, des
+
+    def match_features(des1, des2, dist_threshold=0.6):
+        """
+        Match features for each subsequent image pair in the dataset
+
+        Arguments:
+        des_list -- a list of descriptors for each image in the dataset
+        dist_threshold -- maximum allowed relative distance between the best matches, (0.0, 1.0) 
+
+        Returns:
+        matches_list -- list of matches for each subsequent image pair in the dataset. 
+                Each matches[i] is a list of matched features from images i and i + 1
+                
+        """
+        matches = []
+        filtered_matches = []
+
+        # Brute Force matching
+        bf = cv2.BFMatcher()
+        # BFMatcher.knnMatch() to get k best matches. In this example, we will take k=2 so that we can apply ratio test explained by D.Lowe in his paper.
+        matches = bf.knnMatch(des1, des2, k=2)
+
+        # Filter through matches
+        for m,n in matches:
+            if m.distance < (dist_threshold * n.distance):
+                filtered_matches.append([m])
+
+        return filtered_matches
+    
+    def estimate_motion(match, kp1, kp2, k, depth1):
+        """
+        Estimate camera motion from a pair of subsequent image frames
+
+        Arguments:
+        match -- list of matched features from the pair of images
+        kp1 -- list of the keypoints in the first image
+        kp2 -- list of the keypoints in the second image
+        k -- camera calibration matrix 
+        
+        Optional arguments:
+        depth1 -- a depth map of the first frame. This argument is not needed if you use Essential Matrix Decomposition
+
+        Returns:
+        rmat -- recovered 3x3 rotation numpy matrix
+        tvec -- recovered 3x1 translation numpy vector
+        image1_points -- a list of selected match coordinates in the first image. image1_points[i] = [u, v], where u and v are 
+                        coordinates of the i-th match in the image coordinate system
+        image2_points -- a list of selected match coordinates in the second image. image1_points[i] = [u, v], where u and v are 
+                        coordinates of the i-th match in the image coordinate system
+                
+        """
+        rmat = np.eye(3)
+        tvec = np.zeros((3, 1))
+        image1_points = []
+        image2_points = []
+
+        return rmat, tvec, image1_points, image2_points
+        pass
+
+
+    def estimate_trajectory(estimate_motion, matches, kp_list, k, depth_maps):
+        pass
+
 
 def visualize_camera_movement(image1, image1_points, image2, image2_points, is_show_img_after_move=False):
     """
@@ -119,116 +200,8 @@ def visualize_camera_movement(image1, image1_points, image2, image2_points, is_s
     
 
 
-def visualize_trajectory(trajectory):
-    pass
-
-#####################################################
-#####################################################
-# EXTRACTING FEATURES
-
-def extract_features_dataset(images):
-    """
-    Find keypoints and descriptors for each image in the dataset
-
-    Arguments:
-    images -- a list of grayscale images
-
-    Returns:
-    kp_list -- a list of keypoints for each image in images
-    des_list -- a list of descriptors for each image in images
-    
-    """
-    kp_list = []
-    des_list = []
-
-    # Create SIFT object
-    sift = cv2.xfeatures2d.SIFT_create()
-    
-    for img in images:
-        # Detect keypoints and compute descriptors
-        kp, des = sift.detectAndCompute(img, None)
-        kp_list.append(kp)
-        des_list.append(des)
-    
-    return kp_list, des_list
-
-
-def visualize_features(image, kp):
-    """
-    Visualize extracted features in the image
-
-    Arguments:
-    image -- a grayscale image
-    kp -- list of the extracted keypoints
-
-    Returns:
-    """
-    display = cv2.drawKeypoints(image, kp, None, color=(0,255,0), flags=0)
-    plt.imshow(display)
-    plt.show()
 
 
 
-# FEATURE MATCHING -- FILTERED
-
-def match_features_dataset(des_list, dist_threshold=0.6):
-    """
-    Match features for each subsequent image pair in the dataset
-
-    Arguments:
-    des_list -- a list of descriptors for each image in the dataset
-    dist_threshold -- maximum allowed relative distance between the best matches, (0.0, 1.0) 
-
-    Returns:
-    matches_list -- list of matches for each subsequent image pair in the dataset. 
-               Each matches[i] is a list of matched features from images i and i + 1
-               
-    """
-    matches_list = []
-
-    # Brute Force matching
-    bf = cv2.BFMatcher()
-    
-    # matches features in image i and i+1
-    for i in range(len(des_list)-1):
-        # Set empty list for each image
-        lst = []
-
-        # BFMatcher.knnMatch() to get k best matches. In this example, we will take k=2 so that we can apply ratio test explained by D.Lowe in his paper.
-        match = bf.knnMatch(des_list[i], des_list[i+1],k=2)
-
-        # Filter through matches
-        for m,n in match:
-            if m.distance < (dist_threshold * n.distance):
-                lst.append([m])
-        matches_list.append(lst)
-                       
-    return matches_list
 
 
-def visualize_matches(image1, kp1, image2, kp2, match, outImg):
-    """
-    Visualize corresponding matches in two images
-
-    Arguments:
-    image1 -- the first image in a matched image pair
-    kp1 -- list of the keypoints in the first image
-    image2 -- the second image in a matched image pair
-    kp2 -- list of the keypoints in the second image
-    match -- list of matched features from the pair of images
-
-    Returns:
-    image_matches -- an image showing the corresponding matches on both image1 and image2 or None if you don't use this function
-    """    
-    # draw lines to match the features 
-    image_matches = cv2.drawMatchesKnn(image1,kp1,image2,kp2, outImg, match,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
-    
-    return image_matches
-
-
-
-def estimate_motion(match, kp1, kp2, k, depth1):
-    # Returns roation and translatino matrix
-    pass
-def estimate_trajectory(estimate_motion, matches, kp_list, k, depth_maps):
-    pass
