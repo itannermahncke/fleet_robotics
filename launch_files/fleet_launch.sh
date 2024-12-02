@@ -8,13 +8,35 @@ source ~/ros2_ws/install/setup.bash;
 
 # first, save the number of robots to a variable
 num_bots=$1
-
+ip_list=()
 # next, shift the starting point of the arguments 1 to the right
 shift 1 # now $1 refers to the first IP address
 
 # for each item remaining in the argument list
 for ip in "$@"
 do
-    echo $1 # print the current IP address
+    ip_list+=($ip) # append the current IP address to the ip list
     shift 1 # shift the starting point one to the right -- the next IP
+done
+echo "${ip_list[@]}"
+
+robot_names=()
+video_ports=()
+sensor_ports=()
+
+for i in {1..$num_bots}
+do
+    robot_names+=(robot{$i})
+    video_ports+=(500{$i})
+    sensor_ports+=(777{$i})
+done
+
+declare -i iter=0
+gscam_config_p1="'udpsrc port="
+gscam_config_p2=" ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264  ! videoconvert'"
+for ip in "${ip_list[@]}"
+do
+    gscam_config=${gscam_config_p1}${video_ports[iter]}${gscam_config_p2}
+    ros2 launch neato_node2 bringup_multi.py host:=$ip robot_name:=($robot_names[iter]) udp_video_port:=($video_ports[iter]) udp_sensor_port:=($sensor_ports[iter]) gscam_config:=$gscam_config
+    ((iter++))
 done
