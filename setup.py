@@ -20,6 +20,9 @@ setup(
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={
-        "console_scripts": [],
+        "console_scripts": [
+            "visual_odometry = fleet_robotics.visual_odometry:main",
+            "sensor_fusion = fleet_robotics.sensor_fusion:main"
+        ],
     },
 )
