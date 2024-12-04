@@ -18,25 +18,28 @@ do
     ip_list+=($ip) # append the current IP address to the ip list
     shift 1 # shift the starting point one to the right -- the next IP
 done
-echo "${ip_list[@]}"
 
+#initializes lists for all robot params
 robot_names=()
 video_ports=()
 sensor_ports=()
 
-for i in {1..$num_bots}
+#sets the names and ports for each of the robots
+for ((i=1; i<=num_bots; i++))
 do
-    robot_names+=(robot{$i})
-    video_ports+=(500{$i})
-    sensor_ports+=(777{$i})
+    robot_names+=(robot$i)
+    video_ports+=(500$i)
+    sensor_ports+=(777$i)
 done
-
+#created the 'gscam_config' part of the launch
 declare -i iter=0
 gscam_config_p1="'udpsrc port="
 gscam_config_p2=" ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264depay ! avdec_h264  ! videoconvert'"
+#for each robot, this will combine the final gscam arg and then launch the neato
 for ip in "${ip_list[@]}"
 do
-    gscam_config=${gscam_config_p1}${video_ports[iter]}${gscam_config_p2}
-    ros2 launch neato_node2 bringup_multi.py host:=$ip robot_name:=($robot_names[iter]) udp_video_port:=($video_ports[iter]) udp_sensor_port:=($sensor_ports[iter]) gscam_config:=$gscam_config
+    gscam_config=${gscam_config_p1}${video_ports[$iter]}${gscam_config_p2}; echo ${gscam_config}
+    
+    ros2 launch neato_node2 bringup_multi.py host:=$ip robot_name:=${robot_names[iter]} udp_video_port:=${video_ports[iter]} udp_sensor_port:=${sensor_ports[iter]} gscam_config:=${gscam_config}
     ((iter++))
 done
