@@ -13,17 +13,18 @@ from sensor_msgs.msg import Image, CompressedImage
 
 from typing import List
 
+
 class VisualOdometryNode(Node):
-    """ 
+    """
     The neato will take an image at each set timestep. With the images, we will perform visual
     odometry with the main step: feature extration, feature matching, and estimate motion. (estimate trajectory?)
 
-    Each image is appended to a deque and processed in the img_callback function. 
-    
+    Each image is appended to a deque and processed in the img_callback function.
+
     Output:
     - rotation, translation vector
         - These vectors associated with each index of the taken images will be appended ot the translation and rotation list.
-    - transformation matrix (from previous pose) 
+    - transformation matrix (from previous pose)
     - published pose
 
     Resources
@@ -38,33 +39,50 @@ class VisualOdometryNode(Node):
         self.update_rate = 0.01  # sec
 
         # Neato Camera Calibration Matrix
-        self.k = np.array([[500.68763, 0.0, 378.6717,],
-              [0.0, 501.1204 , 207.83452,],
-              [0.0, 0.0, 1.0]], dtype=np.float32)
-        self.focal = (self.k[0][0] + self.k[1][1])/2
+        self.k = np.array(
+            [
+                [
+                    500.68763,
+                    0.0,
+                    378.6717,
+                ],
+                [
+                    0.0,
+                    501.1204,
+                    207.83452,
+                ],
+                [0.0, 0.0, 1.0],
+            ],
+            dtype=np.float32,
+        )
+        self.focal = (self.k[0][0] + self.k[1][1]) / 2
         self.pp = (self.k[0][2], self.k[1][2])
 
         # Pose
-        self.current_pose = [np.eye(4)]
+        self.current_pose = np.eye(4)
         self.latest_pose = None
         # Pose as a 4x4 matrix - extract pose attributes
-        self.pose_history: List[Pose] = [np.eye(4)] # need to set inital transform to inital pose
+        self.pose_history: List[Pose] = np.eye(
+            4
+        )  # need to set inital transform to inital pose
 
         # MVO attrivutes
-        self.kp_list = [] #deque(maxlen=30)
-        self.des_list = [] #deque(maxlen=30)
+        self.kp_list = []  # deque(maxlen=30)
+        self.des_list = []  # deque(maxlen=30)
 
         # Transform
-        self.pose_transform_history = [np.eye(4)] # set inital transform to none
+        self.pose_transform_history = np.eye(4)  # set inital transform to none
         self.current_transform = None
-        self.combined_transform = np.eye(4) # all transforms     
+        self.combined_transform = np.eye(4)  # all transforms
 
         # Publishers and Subscribers
         self.transform_timer = self.create_timer(
             self.update_rate, self.publish_visual_pose
         )
 
-        self.image_sub = self.create_subscription(Image, "/image_raw", self.img_callback, 10)
+        self.image_sub = self.create_subscription(
+            Image, "/image_raw", self.img_callback, 10
+        )
         self.image_deque = deque(maxlen=30)
 
         self.pose_pub = self.create_publisher(Pose, "visual_pose", 10)
@@ -72,10 +90,10 @@ class VisualOdometryNode(Node):
     def update_pose(self):
         """
         Get current pose by applying the transformation matrix to the latest pose
-        """   
+        """
         self.latest_pose = self.current_pose
         self.current_pose = self.pose_transform_history[-1] @ self.latest_pose
-        self.pose_history.append(self.current_pose)        
+        self.pose_history.append(self.current_pose)
 
     def img_callback(self, img_msg: Image):
         """
@@ -93,13 +111,19 @@ class VisualOdometryNode(Node):
         self.des_list.append(des)
 
         # Feature Matching
-        if self.image_deque is None or len(self.image_deque) == 1: # do nothing for first image
+        if (
+            self.image_deque is None or len(self.image_deque) == 1
+        ):  # do nothing for first image
             pass
         else:
-            filtered_matches = self.match_features(self.des_list[-2], self.des_list[-1], dist_threshold=0.6)
+            filtered_matches = self.match_features(
+                self.des_list[-2], self.des_list[-1], dist_threshold=0.6
+            )
 
         # Estimate Motion
-        rmat, tvec, _, _ = self.estimate_motion(filtered_matches, self.kp_list[-2], self.kp_list[-1])
+        rmat, tvec, _, _ = self.estimate_motion(
+            filtered_matches, self.kp_list[-2], self.kp_list[-1]
+        )
 
         # Create a 4x4 homogeneous transformation matrix
         self.current_transform = np.eye(4)  # Reset with an identity matrix
@@ -121,26 +145,28 @@ class VisualOdometryNode(Node):
 
         for transform in self.pose_transform_history:
             full_transform = np.dot(self.combined_transform, transform)
-        
+
         return full_transform
-        
+
     def publish_visual_pose(self):
         """
         Publish current pose
         """
         self.update_pose()
-
+        # print(np.array(self.current_pose))
         # convert roation to quaternion
         current_rotation = self.current_pose[:3, :3]
-        quaternion = Rotation.from_matrix(current_rotation).as_quat() 
+        # current_rotation = [np.eye(3)]
+        print(current_rotation)
+        quaternion = Rotation.from_matrix(current_rotation).as_quat()
 
         # Create and populate the Pose message
         pose = Pose()
 
         # Assign position from translation matrix
-        pose.position.x = self.current_pose[1][3]
-        pose.position.y = self.current_pose[2][3]
-        pose.position.z = self.current_pose[3][3]
+        pose.position.x = self.current_pose[0][2]
+        pose.position.y = self.current_pose[1][2]
+        pose.position.z = self.current_pose[2][2]
 
         # Assign orientation from translation matrix
         pose.orientation.x = quaternion[0]
@@ -149,7 +175,6 @@ class VisualOdometryNode(Node):
         pose.orientation.w = quaternion[3]
 
         self.pose_pub.publish(pose)
-
 
     # HELPER FUNCTIONS
     def extract_features(self, image):
@@ -174,12 +199,12 @@ class VisualOdometryNode(Node):
 
         Arguments:
         des_list -- a list of descriptors for each image in the dataset
-        dist_threshold -- maximum allowed relative distance between the best matches, (0.0, 1.0) 
+        dist_threshold -- maximum allowed relative distance between the best matches, (0.0, 1.0)
 
         Returns:
-        matches_list -- list of matches for each subsequent image pair in the dataset. 
+        matches_list -- list of matches for each subsequent image pair in the dataset.
                 Each matches[i] is a list of matched features from images i and i + 1
-                
+
         """
         matches = []
         filtered_matches = []
@@ -190,7 +215,7 @@ class VisualOdometryNode(Node):
         matches = bf.knnMatch(des1, des2, k=2)
 
         # Filter matches by distance
-        for m,n in matches:
+        for m, n in matches:
             if m.distance < (dist_threshold * n.distance):
                 filtered_matches.append([m])
 
@@ -204,13 +229,13 @@ class VisualOdometryNode(Node):
         matches -- list of matched features from the pair of images
         kp1 -- list of the keypoints in the first image
         kp2 -- list of the keypoints in the second image
-        
+
         Optional arguments:
         depth1 -- a depth map of the first frame. This argument is not needed if you use Essential Matrix Decomposition
 
         Returns:
         rmat -- recovered 3x3 rotation numpy matrix
-        tvec -- recovered 3x1 translation numpy vector                
+        tvec -- recovered 3x1 translation numpy vector
         """
         # rmat = np.eye(3)
         # tvec = np.zeros((3, 1))
@@ -222,12 +247,15 @@ class VisualOdometryNode(Node):
         img1_points = np.array([kp1[m.queryIdx].pt for m in matches])
         img2_points = np.array([kp2[m.trainIdx].pt for m in matches])
 
-        E, _ = cv2.findEssentialMat(img2_points, img1_points, self.focal, self.pp, cv2.RANSAC, 0.999, 1.0, None)
-        _, rmat, tvec, _ = cv2.recoverPose(E, img1_points, img2_points, focal=self.focal, pp=self.pp, mask=None)
+        E, _ = cv2.findEssentialMat(
+            img2_points, img1_points, self.focal, self.pp, cv2.RANSAC, 0.999, 1.0, None
+        )
+        _, rmat, tvec, _ = cv2.recoverPose(
+            E, img1_points, img2_points, focal=self.focal, pp=self.pp, mask=None
+        )
 
         return rmat, tvec
-    
-        
+
 
 def main(args=None):
     rclpy.init(args=args)
