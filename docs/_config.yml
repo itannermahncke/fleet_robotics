@@ -10,15 +10,15 @@ yaml_front_matter: true
 
 nav:
   - name: Home
-    link: fleet_robotics/
+    link: fleet_robotics
   - name: System
-    link: fleet_robotics/system
+    link: system
   - name: Progress
-    link: fleet_robotics/progress
+    link: progress
   - name: Galley
-    link: fleet_robotics/gallery
+    link: gallery
   - name: Team
-    link: fleet_robotics/team
+    link: team
 # Other settings (optional)
 #permalink: pretty
 #paginate: 5
