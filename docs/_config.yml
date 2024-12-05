@@ -1,11 +1,24 @@
+# Site settings
+title: Fleet Robotics
+
+# Theme settings
 theme: jekyll-theme-minimal
----
-  defaults:
-      # _docs
-      - scope:
-          path: ""
-          type: main
-        values:
-          sidebar:
-            nav: "main"
-  ---
+
+# YAML Front Matter settings
+yaml_front_matter: true
+
+
+nav:
+  - name: Home
+    link: /
+  - name: System
+    link: /system
+  - name: Progress
+    link: /progress
+  - name: Galley
+    link: /gallery
+  - name: Team
+    link: /team
+# Other settings (optional)
+#permalink: pretty
+#paginate: 5
