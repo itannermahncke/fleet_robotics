@@ -10,7 +10,7 @@ yaml_front_matter: true
 
 nav:
   - name: Home
-    link: fleet_robotics
+    link: 
   - name: System
     link: system
   - name: Progress
