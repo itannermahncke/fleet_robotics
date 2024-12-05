@@ -1,3 +1,8 @@
+---
+title: Progress
+layout: default
+filename: progress.md
+--- 
 # Progress Page
 ### Should conatin
 - Milestone 1
