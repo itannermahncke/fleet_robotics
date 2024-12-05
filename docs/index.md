@@ -19,7 +19,7 @@ The final product involves a demonstration of a decentraized path planning algor
 
 For our first milestone, we decided to map out the architecture of our software system. We developed the following system diagram to describe the node network of one Neato, including how we planned for it to communicate with itself and others:
 
-![A system diagram of a single Neato's node network interfacing with the broader Neato network. The local network is split up into two sections: state estimation and path planning.](diagram.png)
+![A system diagram of a single Neato's node network interfacing with the broader Neato network. The local network is split up into two sections: state estimation and path planning.](assets/diagram.png)
 
 We broke up our first sprint into three tasks: launching four Neatos with one file; implementing basic visual odometry on a set of images; and researching visual-inertial odometry via Kalman filtering. Notably, we are not examining the path-planning portion of this project until the next sprint.
 

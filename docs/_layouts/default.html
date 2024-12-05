@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page.title | escape }}</title>
+  <link rel="stylesheet" href="{{ '/assets/main.css' | relative_url }}">
+</head>
+<body>
+  <!-- Sidebar Section -->
+  <div class="sidebar">
+    <ul>
+      {% for item in site.nav %}
+        <li><a href="{{ item.link }}">{{ item.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- Main Content Section -->
+  <div class="content">
+    {{ content }}
+  </div>
+</body>
+</html>
