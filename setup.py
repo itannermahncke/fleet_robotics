@@ -10,7 +10,6 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
-        (os.path.join("share", package_name), glob("launch/*.launch.py")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -22,7 +21,7 @@ setup(
     entry_points={
         "console_scripts": [
             "visual_odometry = fleet_robotics.visual_odometry:main",
-            "sensor_fusion = fleet_robotics.sensor_fusion:main"
+            "sensor_fusion = fleet_robotics.sensor_fusion:main",
         ],
     },
 )
