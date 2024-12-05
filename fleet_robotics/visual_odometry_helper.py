@@ -93,8 +93,6 @@ class NeatoFleetDatatsetHander:
         # Create SIFT object
         sift = cv2.xfeatures2d.SIFT_create()
         kp, des = sift.detectAndCompute(image, None)
-
-        
         return kp, des
 
     def match_features(des1, des2, dist_threshold=0.6):
