@@ -10,9 +10,11 @@ yaml_front_matter: true
 
 nav:
   - name: Home
-    link: 
+    link: /
   - name: System
     link: system
+  - name: .. Sensor Fusion
+    link: sensor_fusion
   - name: Progress
     link: progress
   - name: Galley
