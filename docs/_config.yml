@@ -13,7 +13,7 @@ nav:
     link: /
   - name: System
     link: system
-  - name: - Sensor Fusion
+  - name: .. Sensor Fusion
     link: sensor_fusion
   - name: Progress
     link: progress
