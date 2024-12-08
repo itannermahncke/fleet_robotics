@@ -10,17 +10,27 @@ yaml_front_matter: true
 
 nav:
   - name: Home
-    link: /
+    link: /fleet_robotics
   - name: System
     link: system
-  - name: .. Sensor Fusion
+  - name: -- Sensor Fusion
     link: sensor_fusion
+  - name: -- Launch
+    link: launch
+  - name: -- Path Planning
+    link: path_planning
   - name: Progress
     link: progress
+  - name: -- Milestone 1
+    link: m1
+  - name: -- Milestone 2
+    link: m2
+  - name: -- Milestone 3
+    link: m3       
+  - name: -- Final
+    link: final     
   - name: Galley
     link: gallery
   - name: Team
     link: team
-# Other settings (optional)
-#permalink: pretty
-#paginate: 5
+
