@@ -10,7 +10,7 @@ yaml_front_matter: true
 
 nav:
   - name: Home
-    link: 
+    link: /fleet_robotics
   - name: System
     link: system
   - name: -- Sensor Fusion
