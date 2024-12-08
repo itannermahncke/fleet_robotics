@@ -10,7 +10,7 @@ yaml_front_matter: true
 
 nav:
   - name: Home
-    link: /
+    link: /index
   - name: System
     link: system
   - name: -- Sensor Fusion
