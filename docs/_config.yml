@@ -33,3 +33,5 @@ nav:
     link: gallery
   - name: Team
     link: team
+
+permalink: /index.md
