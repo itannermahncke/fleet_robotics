@@ -33,4 +33,6 @@ nav:
     link: gallery
   - name: Team
     link: team
+  - name: Ethics
+    link: ethics
 
