@@ -5,7 +5,7 @@ from rclpy.time import Time
 from fleet_robotics_msgs.msg import CrashDetection, PoseStampedSourced, TimeSourced
 
 from builtin_interfaces.msg import Time as TimeMsg
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import PoseStamped
 import rclpy.time
 
 
