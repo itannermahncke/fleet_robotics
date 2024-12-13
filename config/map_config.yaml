@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    grid_width: 2
+    grid_height: 5
+    square_side_in_meters: 1
