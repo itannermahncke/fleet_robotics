@@ -1,4 +1,5 @@
 from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
 from launch import LaunchDescription
 from ament_index_python.packages import get_package_share_directory
 
@@ -12,22 +13,15 @@ def generate_launch_description():
 
     # launch argument for robot name: ...
     # save as param and pass to all nodes
-
+    robot_name = DeclareLaunchArgument("robot_name", default_value="")
     return LaunchDescription(
         [
             Node(
-                package="pie_waiterbot",
-                executable="visual_odom",
-                parameters=[config],
-            ),
-            Node(
-                package="pie_waiterbot",
-                executable="crash_handling",
-            ),
-            Node(
-                package="pie_waiterbot",
-                executable="path_planning",
-                parameters=[config],
+                package="fleet_robotics",
+                executable="send_message_node",
+                remappings=[
+                    ("/cmd_vel", f"{robot_name}/cmd_vel"),
+                ],
             ),
         ]
     )
