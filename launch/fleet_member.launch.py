@@ -1,4 +1,5 @@
 from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
 from launch import LaunchDescription
 from ament_index_python.packages import get_package_share_directory
 
@@ -15,7 +16,7 @@ def generate_launch_description():
 
     # launch argument for robot name: ...
     # save as param and pass to all nodes
-
+    robot_name = DeclareLaunchArgument("robot_name", default_value="")
     return LaunchDescription(
         [
             Node(

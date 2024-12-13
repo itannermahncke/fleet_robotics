@@ -51,34 +51,40 @@ class NetworkStartupNode(Node):
             self.get_parameter("robot_name").get_parameter_value().string_value
         )
         self.robot_num = int(self.robot_name[-1])
-        self.messages = list(range(self.num_robots))
-        # Creating publishers and subscribers for the robots
-        self.create_publisher(String, "send_msg", self.send_msg_callback, 10)
+        self.good_comms = [False] * self.num_robots
+
+        timer_period = 0.1
+        self.timer = self.create_timer(timer_period, self.run)
+        # Robot 1 publishes to speak: 'robot 1 speaking'
+        # Other robots subscribed to speak: run callback func
+        #   other robots publish to heard: 'robot{num} heard robot 1
+        # Robot 1 subscribed to heard: if all heard, move on
+        self.speaker = self.create_publisher(String, "speak", 10)
+        self.listner = self.create_publisher(String, "heard", 10)
         for num in range(0, self.num_robots):
             if num == self.robot_num:
                 continue
             else:
                 self.create_subscription(
-                    String, f"/robot{num}/receive_msg", self.receive_msg_callback, 10
+                    String, f"/robot{num}/speak", self.speak_callback, 10
                 )
+                self.create_subscription(
+                    String, f"/robot{num}/heard", self.heard_callback, 10
+                )
+        self.speaker.publish(String(data=f"robot {self.robot_num} speaking"))
 
-        for num in range(0, self.num_robots):
-            if num == self.robot_num:
-                self.send_message()
-            else:
-                self.confirm_receive()
+    def run(self):
+        if all(x for x in self.good_comms):
+            pass  # go on to do timings, Then publish message
 
-    def send_message(self):
-        pass
+    def speak_callback(self, msg: String):
+        self.listner.publish(
+            String(data=f"robot {self.robot_num} heard robot {msg[6]}")
+        )
 
-    def confirm_receive(self):
-        pass
-
-    def send_msg_callback(self, msg: String):
-        pass
-
-    def receive_msg_callback(self, msg: String):
-        pass
+    def heard_callback(self, msg: String):
+        good_comm_robot = int(msg[6]) - 1
+        self.good_comms[good_comm_robot] = True
 
 
 def main(args=None):
