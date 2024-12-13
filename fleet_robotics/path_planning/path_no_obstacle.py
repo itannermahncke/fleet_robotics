@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import LaserScan
+from nav_msgs.msg import Odometry  
 
 class PathPlanningNode(Node):
     def __init__(self):
@@ -22,33 +23,46 @@ class PathPlanningNode(Node):
         # )
         # self.robot_num = int(self.robot_name[-1])
 
-
-        self.current_pose = None  # Current robot pose (x, y, theta)
-        self.goal_pose = None  # Goal pose (x, y)
-        self.obstacle_data = None  # LiDAR obstacle data
+        self.current_pose = None   # Current robot pose (x, y, theta)world frame
+        self.goal_pose = None  # Goal pose (x, y) in world frame
         self.goal_received = False #initialize path planning only when this is true
+        self.grid_size = 0.4
+        self.map_width = 2.25
+        self.map_height = 5
         # Parameters
-        self.step_size = 0.2  # Distance to move per step
+        # self.step_size = 0.2  # Distance to move per step
         self.threshold_to_goal = 0.05  # Distance threshold to consider goal reached
         # self.obstacle_threshold = 0.4  # Distance threshold for obstacles
 
-        self.linear_vel = 0.2
-        self.angular_vel = 0.2
+        # self.linear_vel = 0.2
+        # self.angular_vel = 0.2
 
-        self.turning = False
-        self.turn_timer = None
+        # self.turning = False
+        # self.turn_timer = None
         # Subscribers
         self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose_callback, 10)
         self.create_subscription(PoseStamped, '/current_pose', self.current_pose_callback, 10)
+        self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
         # self.create_subscription(LaserScan, '/scan', self.lidar_callback, 10)
 
         # Publishers
         self.next_pose_publisher = self.create_publisher(PoseStamped, '/next_pose', 10)
-        self.heading_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+        # self.heading_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
 
         # Timer
         self.timer = self.create_timer(0.5, self.timer_callback)
 
+    def translate_world_to_discrete(self, world_pose):
+        discrete_coord_x = math.floor(world_pose[0] / self.grid_size)
+        discrete_coord_y = math.floor(world_pose[1] / self.grid_size)
+        return [discrete_coord_x, discrete_coord_y]
+
+
+    def translate_discrete_to_world(self, discrete_pose):
+
+        world_pose_x = discrete_pose[0]*self.grid_size + (self.grid_size/2)
+        world_pose_y = discrete_pose[1]*self.grid_size + (self.grid_size/2)
+        return [world_pose_x, world_pose_y]
 
     def goal_pose_callback(self, goal_msg : PoseStamped):
         """Callback to receive the goal pose."""
@@ -60,82 +74,67 @@ class PathPlanningNode(Node):
         self.current_pose = (
             pose_msg.pose.position.x,
             pose_msg.pose.position.y,
-            self.heading_to_global(pose_msg.pose.orientation)
+            # self.heading_to_global(pose_msg.pose.orientation)
         )
+    def odom_callback(self, odom_msg: Odometry):
+        """Callback to process odometry data."""
+        position = odom_msg.pose.pose.position
+        # orientation = odom_msg.pose.pose.orientation
 
+        # Extract (x, y) from position
+        x = position.x
+        y = position.y
 
-    def timer_callback(self):
-        """Main planning loop triggered by the timer."""
-        if not self.goal_received or self.goal_pose is None or self.current_pose is None or self.obstacle_data is None:
+        # Convert quaternion to Euler angles to extract theta (yaw)
+        # siny_cosp = 2 * (orientation.w * orientation.z + orientation.x * orientation.y)
+        # cosy_cosp = 1 - 2 * (orientation.y**2 + orientation.z**2)
+        # theta = math.atan2(siny_cosp, cosy_cosp)
+
+        # Update current pose
+        self.current_pose = (x, y)
+
+        
+    def generic_callback(self):
+        if not self.goal_received or self.current_pose is None or self.goal_pose is None:
             return
 
-        if self.turning:
-            # If currently turning, wait for turn_timer to handle stopping
-            return
+        # Translate poses and calculate next step
+        discrete_current = self.translate_world_to_discrete(self.current_pose)
+        discrete_goal = self.translate_world_to_discrete(self.goal_pose)
+        self.goal_pose = discrete_goal
+        next_pose_discrete = self.plan_next_pose(discrete_current)
 
-        next_pose = self.plan_next_pose()
+        # Publish the next pose
+        if next_pose_discrete:
+            world_next_pose = self.translate_discrete_to_world(next_pose_discrete)
+            pose_msg = PoseStamped()
+            pose_msg.pose.position.x = world_next_pose[0]
+            pose_msg.pose.position.y = world_next_pose[1]
+            self.next_pose_publisher.publish(pose_msg)
 
-        if next_pose:
-
-            angle_difference = next_pose[2] - self.current_pose[2]
-
-            if abs(angle_difference) > 0.01:  # If there's an angle difference to adjust
-                self.start_turn(angle_difference)
-            else:
-                # Move forward after adjusting angle
-                twist_msg = Twist()
-                twist_msg.linear.x = self.linear_vel
-                self.heading_publisher.publish(twist_msg)
-
-
-    def start_turn(self, angle_difference):
-        """Initiate a turning motion."""
-        turn_time = abs(angle_difference / self.angular_vel)
-
-        # Set the angular velocity direction
-        twist_msg = Twist()
-        twist_msg.angular.z = self.angular_vel if angle_difference > 0 else -self.angular_vel
-        self.heading_publisher.publish(twist_msg)
-
-        # Start a timer for the turn
-        self.turning = True
-        self.turn_timer = self.create_timer(turn_time, self.stop_turn)
-
-
-    def stop_turn(self):
-        """Stop the turning motion."""
-        # Stop the timer
-        if self.turn_timer:
-            self.turn_timer.cancel()
-            self.turn_timer = None
-
-        # Stop the angular velocity
-        twist_msg = Twist()
-        twist_msg.angular.z = 0.0
-        self.heading_publisher.publish(twist_msg)
-
-        # Transition back to regular motion
-        self.turning = False
-
-
-    def plan_next_pose(self):
+    def plan_next_pose(self, current_pose_discrete):
         """Path planning logic."""
-        current_x, current_y, current_theta = self.current_pose
-        goal_x, goal_y = self.goal_pose
 
         # Check if the goal is reached
-        if math.dist((current_x, current_y), self.goal_pose) < self.threshold_to_goal:
-            self.get_logger().info('Goal reached!')
+        if math.dist(self.current_pose, self.goal_pose) < self.threshold_to_goal:
+            self.get_logger().info('Goal!')
             return None
+        grids_around = []
+        grids_around_add = [(-1,1), (0,1),(1,1),(-1,0),(1,0),(-1,-1),(0,-1),(1,-1)]
+        for grids in grids_around_add:
+            result = tuple(x + y for x, y in zip(current_pose_discrete, grids))
+            grids_around.append(result)
 
-        # Compute direction vector toward the goal
-        vector_to_goal = np.array([goal_x - current_x, goal_y - current_y])
-        norm_vector = vector_to_goal / np.linalg.norm(vector_to_goal)
-        next_x = current_x + self.step_size * norm_vector[0]
-        next_y = current_y + self.step_size * norm_vector[1]
-        heading = math.atan2(norm_vector[1], norm_vector[0])
+        min_distance = float("inf")
+        next_pose_discrete = None
+        for grid in grids_around:
+            distance = abs(self.goal_pose[0]- grid[0])+abs(self.goal_pose[1]- grid[1])
+            if distance < min_distance:
+                min_distance = distance
+                next_pose_discrete = grid
+        return next_pose_discrete
+            
 
-        return (next_x, next_y, heading)
 
 
 def main(args=None):
