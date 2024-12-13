@@ -6,8 +6,8 @@ import os
 
 
 def generate_launch_description():
-    config = os.path.join(
-        get_package_share_directory("fleet_robotics"), "test_config.yaml"
+    fleet_info = os.path.join(
+        get_package_share_directory("fleet_robotics"), "fleet_info.yaml"
     )
 
     # launch argument for robot name: ...
@@ -17,17 +17,25 @@ def generate_launch_description():
         [
             Node(
                 package="pie_waiterbot",
-                executable="visual_odom",
-                parameters=[config],
+                executable="network_startup",
+                parameters=[fleet_info],
             ),
             Node(
                 package="pie_waiterbot",
-                executable="crash_handling",
+                executable="visual_odom",
             ),
             Node(
                 package="pie_waiterbot",
                 executable="path_planning",
-                parameters=[config],
+            ),
+            Node(
+                package="pie_waiterbot",
+                executable="crash_handling",
+                parameters=[fleet_info],
+            ),
+            Node(
+                package="pie_waiterbot",
+                executable="motion_execution",
             ),
         ]
     )
