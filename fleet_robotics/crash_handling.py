@@ -74,22 +74,12 @@ class CrashHandlingNode(Node):
         self.latest_poses = [] * self.num_robots
         self.latest_requests = [] * self.num_robots
 
-        # subscribe to local pose and next request
-        self.local_pose_sub = self.create_subscription(
-            PoseStamped,
-            f"/{self.robot_name}/pose_estimate",
-            self.local_pose_callback,
-            10,
-        )
+        # subscribe to local next steps
         self.local_request_sub = self.create_subscription(
             PoseStamped,
             f"/{self.robot_name}/next_request",
             self.local_request_callback,
             10,
-        )
-        self.declare_parameter("init_pose", rclpy.Parameter.Type.DOUBLE_ARRAY)
-        self.my_latest_pose = (
-            self.get_parameter("init_pose").get_parameter_value().double_array_value
         )
         self.my_latest_request = None
 
@@ -121,13 +111,6 @@ class CrashHandlingNode(Node):
         """
         # assumes frame_id is robot_name (formatted robotN)
         self.latest_requests[int(pose_msg.header.frame_id[-1])] = pose_msg
-
-    def local_pose_callback(self, pose_msg: PoseStamped):
-        """
-        Callback when any local pose is received.
-        """
-        # assumes frame_id is robot_name (formatted robotN)
-        self.my_latest_pose = pose_msg
 
     def local_request_callback(self, my_pose_msg: PoseStamped):
         """

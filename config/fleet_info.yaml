@@ -1,3 +1,8 @@
 /**:
   ros__parameters:
     num_robots: 2
+
+    robot1_initial_pose: [0.0, 0.0, 0.0]
+    robot1_goal: [0.0, 0.0]
+    robot2_initial_pose: [0.0, 0.0, 0.0]
+    robot2_goal: [0.0, 0.0]
