@@ -9,6 +9,9 @@ def generate_launch_description():
     fleet_info = os.path.join(
         get_package_share_directory("fleet_robotics"), "fleet_info.yaml"
     )
+    map_config = os.path.join(
+        get_package_share_directory("fleet_robotics"), "map_config.yaml"
+    )
 
     # launch argument for robot name: ...
     # save as param and pass to all nodes
@@ -27,6 +30,7 @@ def generate_launch_description():
             Node(
                 package="pie_waiterbot",
                 executable="path_planning",
+                parameters=[fleet_info, map_config],
             ),
             Node(
                 package="pie_waiterbot",
