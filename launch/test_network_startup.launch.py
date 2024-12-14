@@ -12,19 +12,34 @@ def generate_launch_description():
     )
 
     # launch argument for robot name: ...
-    robot_name_param = None  # save as param and pass to all nodes
-    robot_name_str = None  # also save as string, for remappign
+    robot_names = ["robot1", "robot2", "robot3", "robot4"]
+    robot_name_param = [
+        {"robot_name": robot_names[0]},
+        {"robot_name": robot_names[1]},
+        {"robot_name": robot_names[2]},
+        {"robot_name": robot_names[3]},
+    ]  # save as param and pass to all nodes
 
-    return LaunchDescription(
-        [
-            # for each robot, do this.
+    topic_names = ["speak", "heard", "comm_check", "current_time"]
+    remap_list = []
+    robot_remap = []
+    for robot in robot_names:
+        for topic in topic_names:
+            remap = (topic, f"{robot}/{topic}")
+            robot_remap.append(remap)
+        remap_list.append(robot_remap)
+        robot_remap = []
+
+    # [("example_topic", f"{robot_names[num]}/example_topic")]
+
+    launch_description = []
+    for num in range(len(robot_names)):
+        launch_description.append(
             Node(
-                package="pie_waiterbot",
+                package="fleet_robotics",
                 executable="network_startup",
-                # also add the robot name param
-                parameters=[fleet_info],
-                # remap every topic here
-                remappings=[("example_topic", f"{robot_name_str}/example_topic")],
-            ),
-        ]
-    )
+                parameters=[fleet_info, robot_name_param[num]],
+                remappings=remap_list[num],
+            )
+        )
+    return LaunchDescription(launch_description)

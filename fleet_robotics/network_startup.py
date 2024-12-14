@@ -18,7 +18,7 @@ class NetworkStartupNode(Node):
         """
         Initialize an instance of the MotionExecutionNode.
         """
-        super.__init__("network_startup")
+        super().__init__("network_startup")
 
         # robots go in order and send a message, then receive confirmation that
         # it was heard.
