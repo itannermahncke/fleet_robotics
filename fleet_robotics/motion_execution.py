@@ -30,7 +30,7 @@ class MotionExecutionNode(Node):
             CrashDetection, "step_clearance", self.clearance_callback, 10
         )
         self.step_sub = self.create_subscription(
-            PoseStamped, "next_step", self.step_callback, 10
+            PoseStampedSourced, "next_step", self.step_callback, 10
         )
 
         # subscribe to current pose estimate
