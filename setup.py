@@ -27,7 +27,7 @@ setup(
             "odom_adapter = fleet_robotics.odom_adapter:main",
             "sensor_fusion = fleet_robotics.extended_kalman_filter:main",
             "crash_handling = fleet_robotics.crash_handling:main",
-            "path_planning = fleet_robotics.path_no_obstacle:main",
+            "path_planning = fleet_robotics.path_planningpath_no_obstacle:main",
             "motion_execution = fleet_robotics.motion_execution:main",
         ],
     },
