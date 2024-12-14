@@ -14,15 +14,16 @@ def generate_launch_description():
         get_package_share_directory("fleet_robotics"), "map_config.yaml"
     )
 
-    # launch argument for robot name: ...
-    # save as param and pass to all nodes
-    robot_name = DeclareLaunchArgument("robot_name", default_value="")
+    # launch argument for robot name
+    robot_name = DeclareLaunchArgument("robot_name", default_value="")  # for remapping
+    robot_name_param = {"robot_name": robot_name}  # for param
+
     return LaunchDescription(
         [
             Node(
                 package="pie_waiterbot",
                 executable="network_startup",
-                parameters=[fleet_info],
+                parameters=[fleet_info, robot_name_param],
             ),
             Node(
                 package="pie_waiterbot",
@@ -31,12 +32,12 @@ def generate_launch_description():
             Node(
                 package="pie_waiterbot",
                 executable="path_planning",
-                parameters=[fleet_info, map_config],
+                parameters=[fleet_info, map_config, robot_name_param],
             ),
             Node(
                 package="pie_waiterbot",
                 executable="crash_handling",
-                parameters=[fleet_info],
+                parameters=[fleet_info, robot_name_param],
             ),
             Node(
                 package="pie_waiterbot",

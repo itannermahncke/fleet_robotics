@@ -43,6 +43,7 @@ do
     gscam_config=${gscam_config_p1}${video_ports[$iter]}${gscam_config_p2}; echo ${gscam_config}
     echo $(gscam_config)
     (ros2 launch neato_node2 bringup_multi.py host:=$ip robot_name:=${robot_names[iter]} udp_video_port:=${video_ports[iter]} udp_sensor_port:=${sensor_ports[iter]} gscam_config:="${gscam_config}") &
+    (ros2 launch fleet_robotics fleet_member.launch.py robot_name:=${robot_names[iter]})
     launch_pid[iter]=$!
     ((iter++))
     echo "........................................................................................................................................"
