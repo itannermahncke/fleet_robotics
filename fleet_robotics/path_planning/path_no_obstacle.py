@@ -2,7 +2,7 @@ import math
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Bool
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose
 
 from fleet_robotics_msgs.msg import PoseStampedSourced
 
@@ -42,7 +42,7 @@ class PathPlanningNode(Node):
 
         # Subscribers
         self.create_subscription(
-            PoseStamped, "pose_estimate", self.current_pose_callback, 10
+            PoseStampedSourced, "pose_estimate", self.current_pose_callback, 10
         )
         self.create_subscription(Bool, "step_status", self.new_step_callback, 10)
 
@@ -71,7 +71,7 @@ class PathPlanningNode(Node):
         world_pose_y = discrete_pose[1] * self.grid_size + (self.grid_size / 2)
         return [world_pose_x, world_pose_y]
 
-    def current_pose_callback(self, pose_msg: PoseStamped):
+    def current_pose_callback(self, pose_msg: PoseStampedSourced):
         """
         Callback to receive the goal pose. This node is only interested in its
         xy coordinates, not its heading.
@@ -97,11 +97,7 @@ class PathPlanningNode(Node):
 
         # Publish the next pose
         if next_pose_discrete:
-            world_next_pose = self.translate_discrete_to_world(next_pose_discrete)
-            pose_msg = PoseStamped()
-            pose_msg.pose.position.x = world_next_pose[0]
-            pose_msg.pose.position.y = world_next_pose[1]
-            self.next_pose_publisher.publish(pose_msg)
+            self.send_next_step(next_pose_discrete)
 
     def send_next_step(self, next_step: tuple):
         """
