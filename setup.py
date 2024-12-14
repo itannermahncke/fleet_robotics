@@ -22,9 +22,13 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
+            "network_startup = fleet_robotics.network_startup:main",
             "visual_odom = fleet_robotics.visual_odometry:main",
-            "sensor_fusion = fleet_robotics.sensor_fusion:main",
-            "send_message_node = fleet_robotics.test_node:main",
+            "odom_adapter = fleet_robotics.odom_adapter:main",
+            "sensor_fusion = fleet_robotics.extended_kalman_filter:main",
+            "crash_handling = fleet_robotics.crash_handling:main",
+            "path_planning = fleet_robotics.path_no_obstacle:main",
+            "motion_execution = fleet_robotics.motion_execution:main",
         ],
     },
 )
