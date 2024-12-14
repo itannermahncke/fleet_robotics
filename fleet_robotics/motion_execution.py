@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 
+from std_msgs.msg import Bool
 from geometry_msgs.msg import PoseStamped, Twist, Pose
 
 from tf_transformations import euler_from_quaternion
@@ -13,7 +14,7 @@ import math
 
 class MotionExecutionNode(Node):
     """
-    This node rationalizes trajectory plans from the path_planning node and
+    This node rationalizes step plans from the path_planning node and
     crash priority from the crash_handling node. It outputs a Twist message
     that commands the robot to act or wait, depending on its situation.
     """
@@ -26,10 +27,10 @@ class MotionExecutionNode(Node):
 
         # subscribe to the crash handler and the path planner
         self.crash_sub = self.create_subscription(
-            CrashDetection, "trajectory_clearance", self.clearance_callback, 10
+            CrashDetection, "step_clearance", self.clearance_callback, 10
         )
-        self.trajectory_sub = self.create_subscription(
-            PoseStamped, "trajectory_request", self.request_callback, 10
+        self.step_sub = self.create_subscription(
+            PoseStamped, "next_step", self.step_callback, 10
         )
 
         # subscribe to current pose estimate
@@ -41,6 +42,9 @@ class MotionExecutionNode(Node):
 
         # publish cmd velocities to Neato
         self.vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
+
+        # publish when a step has been completed
+        self.goal_pub = self.create_publisher(Bool, "goal_status", 10)
 
         # attributes
         self.clearances: deque[CrashDetection] = deque(maxlen=10)
@@ -57,13 +61,13 @@ class MotionExecutionNode(Node):
     def clearance_callback(self, crash_msg: CrashDetection):
         """
         When the crash handler informs this node about the clearance for a
-        particular pose/trajectory, note it here.
+        particular pose/step, note it here.
         """
         self.clearances.append(crash_msg)
 
-    def request_callback(self, pose_msg: PoseStampedSourced):
+    def step_callback(self, pose_msg: PoseStampedSourced):
         """
-        When a new pose request is received, make sure it is not at risk of
+        When a new pose step is received, make sure it is not at risk of
         crashing. Then, execute.
         """
         for crash in self.clearances:
@@ -87,7 +91,7 @@ class MotionExecutionNode(Node):
             twist.linear.x = self.max_lin_vel
         # if within tolerance
         else:
-            pass
+            self.goal_pub.publish(Bool(data=True))
 
         # publish OR skip if identical to latest
         if not (
