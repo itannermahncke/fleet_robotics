@@ -26,13 +26,19 @@ class PathPlanningNode(Node):
             .string_value
         )  # goal pose (x, y) in world frame
 
-        # map status
-        self.grid_size = 0.4
-        self.map_width = 2.25
-        self.map_height = 5
-
-        # Parameters
-        self.threshold_to_goal = 0.05  # Distance threshold to consider goal reached
+        # map state
+        self.declare_parameter("square_size", rclpy.Parameter.Type.DOUBLE)
+        self.declare_parameter("map_width", rclpy.Parameter.Type.INTEGER)
+        self.declare_parameter("map_height", rclpy.Parameter.Type.INTEGER)
+        self.grid_size = (
+            self.get_parameter("square_size").get_parameter_value().double_value
+        )
+        self.map_width = (
+            self.get_parameter("map_width").get_parameter_value().integer_value
+        )
+        self.map_height = (
+            self.get_parameter("map_height").get_parameter_value().integer_value
+        )
 
         # Subscribers
         self.create_subscription(
@@ -123,11 +129,6 @@ class PathPlanningNode(Node):
         """
         Path planning logic. Live A* algorithm.
         """
-
-        # Check if the goal is reached
-        if math.dist(self.current_pose, self.goal_pose) < self.threshold_to_goal:
-            self.get_logger().info("Goal!")
-            return None
         grids_around = []
         grids_around_add = [
             (-1, 1),
