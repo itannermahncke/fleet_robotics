@@ -53,7 +53,7 @@ class CrashHandlingNode(Node):
         self.time_offsets = {}
 
         # add as many subscribers as is necessary from other robots
-        for num in range(0, self.num_robots):
+        for num in range(1, self.num_robots):
             # do not subscribe to yourself
             if num == self.robot_num:
                 continue
