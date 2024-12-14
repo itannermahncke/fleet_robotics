@@ -67,26 +67,24 @@ class CrashHandlingNode(Node):
                 )
                 self.create_subscription(
                     PoseStamped,
-                    f"/robot{num}/next_request",
-                    self.generic_request_callback,
+                    f"/robot{num}/next_step",
+                    self.generic_step_callback,
                     10,
                 )
         self.latest_poses = [] * self.num_robots
-        self.latest_requests = [] * self.num_robots
+        self.latest_steps = [] * self.num_robots
 
         # subscribe to local next steps
-        self.local_request_sub = self.create_subscription(
+        self.local_step_sub = self.create_subscription(
             PoseStamped,
-            f"/{self.robot_name}/next_request",
-            self.local_request_callback,
+            f"/{self.robot_name}/next_step",
+            self.local_step_callback,
             10,
         )
-        self.my_latest_request = None
+        self.my_latest_step = None
 
-        # publish any requests that could cause a crash if executed
-        self.crash_pub = self.create_publisher(
-            CrashDetection, "trajectory_clearance", 10
-        )
+        # publish any steps that could cause a crash if executed
+        self.crash_pub = self.create_publisher(CrashDetection, "step_clearance", 10)
 
         # other attributes for handling crashes
         self.CRASH_RADIUS = 1.0  # meters
@@ -105,38 +103,38 @@ class CrashHandlingNode(Node):
         # assumes frame_id is robot_name (formatted robotN)
         self.latest_poses[int(pose_msg.header.frame_id[-1])] = pose_msg
 
-    def generic_request_callback(self, pose_msg: PoseStamped):
+    def generic_step_callback(self, pose_msg: PoseStamped):
         """
-        Callback when any external motion request is received.
+        Callback when any external motion step is received.
         """
         # assumes frame_id is robot_name (formatted robotN)
-        self.latest_requests[int(pose_msg.header.frame_id[-1])] = pose_msg
+        self.latest_steps[int(pose_msg.header.frame_id[-1])] = pose_msg
 
-    def local_request_callback(self, my_pose_msg: PoseStamped):
+    def local_step_callback(self, my_pose_msg: PoseStamped):
         """
-        Callback when any local motion request is received. This is when crash
+        Callback when any local motion step is received. This is when crash
         handling is performed.
         """
         # assumes frame_id is robot_name (formatted robotN)
-        self.my_latest_request = my_pose_msg
+        self.my_latest_step = my_pose_msg
 
         # path crashes, for handling mass crash events
         collision_agents = [self.robot_name]
 
-        # check all robot poses/trajectories
+        # check all robot poses/steps
         for robot in range(0, self.num_robots):
             remote_pose = self.latest_poses[robot]
-            remote_trajectory = self.latest_requests[robot]
+            remote_step = self.latest_steps[robot]
 
-            # if any remote poses are in local trajectory -- execute body crash protocol
+            # if any remote poses are in local step -- execute body crash protocol
             if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
                 self, my_pose_msg, remote_pose
             ):
                 self.crash_reported()
                 return
-            # if any remote trajectories are in local trajectory -- note the collision for later
-            elif self.pose_is_recent(remote_trajectory) and self.determine_crash_radius(
-                my_pose_msg, remote_trajectory
+            # if any remote steps are in local step -- note the collision for later
+            elif self.pose_is_recent(remote_step) and self.determine_crash_radius(
+                my_pose_msg, remote_step
             ):
                 collision_agents.append(robot)
 
@@ -145,7 +143,7 @@ class CrashHandlingNode(Node):
             self.path_crash_reported(my_pose_msg, collision_agents)
             return
 
-        # greenlight the trajectory
+        # greenlight the step
         self.no_crash_reported(my_pose_msg)
 
     def offset_callback(self, time: TimeSourced):
@@ -162,7 +160,7 @@ class CrashHandlingNode(Node):
     def determine_crash_radius(self, local_pose: PoseStamped, remote_pose: PoseStamped):
         """
         Determine if there is a risk of crash between two poses. This function
-        can be used to compare any combination of poses and trajectories.
+        can be used to compare any combination of poses and steps.
 
         The threshold should be equivalent to the step size of the grid.
 
@@ -209,7 +207,7 @@ class CrashHandlingNode(Node):
 
         This means that when a potential body crash is reported, this node
         publishes a crash detection immediately, preventing the Neato from
-        taking that trajectory at that time.
+        taking that step at that time.
         """
         self.crash_pub.publish(
             CrashDetection(header=pose.header, pose=pose.pose, clearance=False)
@@ -231,7 +229,7 @@ class CrashHandlingNode(Node):
 
     def no_crash_reported(self, pose: PoseStamped):
         """
-        Greenlight the current pose trajectory.
+        Greenlight the current step.
         """
         self.crash_pub.publish(
             CrashDetection(header=pose.header, pose=pose.pose, clearance=True)
