@@ -31,7 +31,7 @@ class CrashHandlingNode(Node):
         """
         Initialize an instance of the CrashHandlingNode.
         """
-        super.__init__("crash_handling")
+        super().__init__("crash_handling")
 
         # access number of robots
         self.declare_parameter("num_robots", rclpy.Parameter.Type.INTEGER)

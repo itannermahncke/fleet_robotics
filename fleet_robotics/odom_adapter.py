@@ -16,7 +16,7 @@ class OdometryAdapterNode(Node):
         """
         Initialize an instance of the OdometryAdapterNode.
         """
-        super.__init__("odom_adapter")
+        super().__init__("odom_adapter")
 
         # robot name# access this robot's name
         self.declare_parameter("robot_name", rclpy.Parameter.Type.STRING)

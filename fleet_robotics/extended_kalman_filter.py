@@ -19,7 +19,7 @@ class ExtendedKalmanFilterNode(Node):
         """
         Initialize an instance of the SensorFusionNode.
         """
-        super.__init__("sensor_fusion")
+        super().__init__("sensor_fusion")
 
         # subscribe to pose estimates
         self.odom_sub = self.create_subscription(Pose, "odom", self.wheel_callback, 10)
