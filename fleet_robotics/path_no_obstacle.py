@@ -19,25 +19,27 @@ class PathPlanningNode(Node):
         self.current_pose = None  # Current robot pose (x, y, theta)world frame
 
         # goal status
-        self.declare_parameter(f"{self.robot_name}_goal", rclpy.Parameter.Type.STRING)
+        self.declare_parameter(
+            f"{self.robot_name}_goal", rclpy.Parameter.Type.DOUBLE_ARRAY
+        )
         self.goal_pose = (
             self.get_parameter(f"{self.robot_name}_goal")
             .get_parameter_value()
-            .string_value
+            .double_array_value
         )  # goal pose (x, y) in world frame
 
         # map state
         self.declare_parameter("square_size", rclpy.Parameter.Type.DOUBLE)
-        self.declare_parameter("map_width", rclpy.Parameter.Type.INTEGER)
-        self.declare_parameter("map_height", rclpy.Parameter.Type.INTEGER)
+        self.declare_parameter("grid_width", rclpy.Parameter.Type.INTEGER)
+        self.declare_parameter("grid_height", rclpy.Parameter.Type.INTEGER)
         self.grid_size = (
             self.get_parameter("square_size").get_parameter_value().double_value
         )
-        self.map_width = (
-            self.get_parameter("map_width").get_parameter_value().integer_value
+        self.grid_width = (
+            self.get_parameter("grid_width").get_parameter_value().integer_value
         )
-        self.map_height = (
-            self.get_parameter("map_height").get_parameter_value().integer_value
+        self.grid_height = (
+            self.get_parameter("grid_height").get_parameter_value().integer_value
         )
 
         # Subscribers

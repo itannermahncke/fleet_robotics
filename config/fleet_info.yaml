@@ -3,4 +3,4 @@
     num_robots: 1
 
     robot1_initial_pose: [0.0, 0.0, 0.0]
-    robot1_goal: [0.0, 0.0]
+    robot1_goal: [2.0, 5.0]

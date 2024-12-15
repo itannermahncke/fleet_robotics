@@ -23,7 +23,7 @@ class MotionExecutionNode(Node):
         """
         Initialize an instance of the MotionExecutionNode.
         """
-        super.__init__("motion_execution")
+        super().__init__("motion_execution")
 
         # subscribe to the crash handler and the path planner
         self.crash_sub = self.create_subscription(
