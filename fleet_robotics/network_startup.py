@@ -61,16 +61,15 @@ class NetworkStartupNode(Node):
         self.time_current = 0.0
         self.time_counter = 0
 
+        # Test Publisher
+        self.test_pub = self.create_publisher(String, "test_pub", 10)
+        self.test_pub.publish(String(data=f"in init: {self.robot_name}"))
         timer_period = 0.1
         self.run_timer = self.create_timer(timer_period, self.run)
-        # Robot 1 publishes to speak: 'robot 1 speaking'
-        # Other robots subscribed to speak: run callback func
-        #   other robots publish to heard: 'robot{num} heard robot 1
-        # Robot 1 subscribed to heard: if all heard, move on
         self.speaker = self.create_publisher(String, "speak", 10)
         self.listner = self.create_publisher(String, "heard", 10)
         self.comm_check = self.create_publisher(String, "comm_check", 10)
-        self.current_time = self.create_publisher(Time, "current_time", 10)
+        self.current_time = self.create_publisher(TimeMsg, "current_time", 10)
         for num in range(1, self.num_robots):
             if self.robot_num == 1:
                 self.create_subscription(
@@ -109,20 +108,23 @@ class NetworkStartupNode(Node):
                     self.timer_starter.publish(String(data="Start"))
 
     def speak_callback(self, msg: String):
+        self.test_pub.publish(String(data=f"in speak_callback: {msg.data}"))
         self.listner.publish(
-            String(data=f"robot {self.robot_num} heard robot {msg[6]}")
+            String(data=f"robot {self.robot_num} heard robot {msg.data[6]}")
         )
 
     def heard_callback(self, msg: String):
-        good_comm_robot = int(msg[6]) - 1
+        self.test_pub.publish(String(data=f"in heard_callback: {msg.data}"))
+        good_comm_robot = int(msg.data[6]) - 1
         self.good_comms[good_comm_robot] = True
 
     def comm_check_callback(self, msg: String):
-        robot_good_comm = int(msg[6]) - 1
+        self.test_pub.publish(String(data=f"in comm_check_callback: {msg.data}"))
+        robot_good_comm = int(msg.data[6]) - 1
         self.robots_good_comms[robot_good_comm] = True
 
     def start_timer_callback(self, msg: String):
-        if msg == "Start":
+        if msg.data == "Start":
             # start timers
             self.timer = self.create_timer(0.01, self.current_time_callback)
             self.start_time = self.get_clock().now()
