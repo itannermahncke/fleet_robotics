@@ -122,21 +122,22 @@ class CrashHandlingNode(Node):
         collision_agents = [self.robot_name]
 
         # check all robot poses/steps
-        for robot in range(0, self.num_robots):
-            remote_pose = self.latest_poses[robot]
-            remote_step = self.latest_steps[robot]
+        for robot in range(1, self.num_robots):
+            if robot != self.robot_num:
+                remote_pose = self.latest_poses[robot]
+                remote_step = self.latest_steps[robot]
 
-            # if any remote poses are in local step -- execute body crash protocol
-            if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
-                self, my_pose_msg, remote_pose
-            ):
-                self.crash_reported()
-                return
-            # if any remote steps are in local step -- note the collision for later
-            elif self.pose_is_recent(remote_step) and self.determine_crash_radius(
-                my_pose_msg, remote_step
-            ):
-                collision_agents.append(robot)
+                # if any remote poses are in local step -- execute body crash protocol
+                if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
+                    self, my_pose_msg, remote_pose
+                ):
+                    self.crash_reported()
+                    return
+                # if any remote steps are in local step -- note the collision for later
+                elif self.pose_is_recent(remote_step) and self.determine_crash_radius(
+                    my_pose_msg, remote_step
+                ):
+                    collision_agents.append(robot)
 
         # evaluate the severity of the path crash
         if len(collision_agents) > 1:
