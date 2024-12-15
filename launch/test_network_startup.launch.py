@@ -13,6 +13,7 @@ def generate_launch_description():
 
     # launch argument for robot name: ...
     robot_names = ["robot1", "robot2", "robot3", "robot4"]
+    # TODO get robot names from launch args in bash file
     robot_name_param = [
         {"robot_name": robot_names[0]},
         {"robot_name": robot_names[1]},
