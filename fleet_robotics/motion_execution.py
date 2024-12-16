@@ -2,10 +2,7 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import Bool
-from geometry_msgs.msg import PoseStamped, Twist, Pose
-
-from tf_transformations import euler_from_quaternion
-
+from geometry_msgs.msg import Twist, Pose
 from fleet_robotics_msgs.msg import CrashDetection, PoseStampedSourced
 
 from collections import deque
@@ -107,16 +104,36 @@ class MotionExecutionNode(Node):
         """
         delta_x = dest.position.x - pose.position.x
         delta_y = dest.position.y - pose.position.y
-        heading = euler_from_quaternion(
+        heading = self.euler_from_quaternion(
             pose.orientation.x,
             pose.orientation.y,
             pose.orientation.z,
             pose.orientation.w,
-        )
+        )[2]
         lin_error = math.sqrt(delta_x**2 + delta_y**2)
         ang_error = math.atan2(delta_y, delta_x) - heading
 
         return lin_error, ang_error
+
+    def euler_from_quaternion(x, y, z, w):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw). Credit to
+        AutomaticAddison for this code lol
+        """
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+
+        return roll_x, pitch_y, yaw_z  # in radians
 
 
 def main(args=None):
