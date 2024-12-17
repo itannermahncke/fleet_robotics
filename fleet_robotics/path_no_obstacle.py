@@ -54,13 +54,13 @@ class PathPlanningNode(Node):
         )
         self.msg_id_counter = 1
 
-    def translate_world_to_discrete(self, world_pose: Pose):
+    def translate_world_to_discrete(self, world_pose: tuple):
         """
         Given a pose in the world, return the square in the discrete world
         that contains this pose.
         """
-        discrete_coord_x = math.floor(world_pose.position.x / self.grid_size)
-        discrete_coord_y = math.floor(world_pose.position.y / self.grid_size)
+        discrete_coord_x = math.floor(world_pose[0] / self.grid_size)
+        discrete_coord_y = math.floor(world_pose[1] / self.grid_size)
         return [discrete_coord_x, discrete_coord_y]
 
     def translate_discrete_to_world(self, discrete_pose: tuple):
@@ -83,7 +83,7 @@ class PathPlanningNode(Node):
             pose_msg.pose.position.y,
         )
 
-    def new_step_callback(self):
+    def new_step_callback(self, _):
         """
         Callback function that occurs when the motion_execution node is ready
         to receive its next step.
@@ -114,13 +114,16 @@ class PathPlanningNode(Node):
         pose_msg.pose.position.y = world_next_pose[1]
 
         # assign a unique message identifier
-        pose_msg.msg_id = self.msg_id_counter
+        pose_msg.msg_id = str(self.msg_id_counter)
         self.msg_id_counter += 1
 
         # tag with the source robot
         pose_msg.source_id = self.robot_name
 
         # publish to Neato network
+        self.get_logger().info(
+            f"Next step at x: {pose_msg.pose.position.x} and y: {pose_msg.pose.position.y}"
+        )
         self.next_pose_publisher.publish(pose_msg)
 
     def plan_next_pose(self, current_pose_discrete):

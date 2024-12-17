@@ -40,10 +40,10 @@ class OdometryAdapterNode(Node):
         # set up message
         pose_msg = PoseStampedSourced()
         pose_msg.header = odom_msg.header
-        pose_msg.pose = odom_msg.pose
+        pose_msg.pose = odom_msg.pose.pose
 
         # maintain unique messages
-        pose_msg.msg_id = self.msg_id_counter
+        pose_msg.msg_id = str(self.msg_id_counter)
         self.msg_id_counter += 1
 
         # source the pose

@@ -12,7 +12,9 @@ def generate_launch_description():
     map_config = os.path.join(
         get_package_share_directory("fleet_robotics"), "map_config.yaml"
     )
-    robot_name = {"robot_name": "robot1"}
+
+    name_str = "robot1"
+    robot_name = {"robot_name": name_str}
 
     return LaunchDescription(
         [
@@ -20,20 +22,35 @@ def generate_launch_description():
                 package="fleet_robotics",
                 executable="odom_adapter",
                 parameters=[robot_name],
+                remappings=[("pose_estimate", f"{name_str}/pose_estimate")],
             ),
             Node(
                 package="fleet_robotics",
                 executable="path_planning",
                 parameters=[fleet_info, map_config, robot_name],
+                remappings=[
+                    ("pose_estimate", f"{name_str}/pose_estimate"),
+                    ("next_step", f"{name_str}/next_step"),
+                    ("next_step", f"{name_str}/step_status"),
+                ],
             ),
             Node(
                 package="fleet_robotics",
                 executable="crash_handling",
                 parameters=[fleet_info, robot_name],
+                remappings=[
+                    ("step_clearance", f"{name_str}/step_clearance"),
+                ],
             ),
             Node(
                 package="fleet_robotics",
                 executable="motion_execution",
+                remappings=[
+                    ("step_clearance", f"{name_str}/step_clearance"),
+                    ("pose_estimate", f"{name_str}/pose_estimate"),
+                    ("next_step", f"{name_str}/next_step"),
+                    ("next_step", f"{name_str}/step_status"),
+                ],
             ),
         ]
     )
