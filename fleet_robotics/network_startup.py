@@ -3,7 +3,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 import time
 import numpy as np
-from std_msgs.msg import String, Empty
+from std_msgs.msg import String, Empty, Int32MultiArray
 from builtin_interfaces.msg import Time as TimeMsg
 from fleet_robotics_msgs.msg import TimeSourced
 
@@ -65,6 +65,11 @@ class NetworkStartupNode(Node):
         self.time_current = 0.0
         self.time_counter = 0
 
+        self.robot_current_times = [0] * self.num_robots
+        self.robot_time_offsets = [0] * self.num_robots
+        self.has_tested_time_offset = False
+        self.sent_offset_message = False
+
         # Test Publisher
         self.test_pub = self.create_publisher(String, "test_pub", 10)
         self.test_pub.publish(
@@ -78,6 +83,7 @@ class NetworkStartupNode(Node):
         self.comm_check = self.create_publisher(String, "comm_check", 10)
         self.current_time = self.create_publisher(TimeSourced, "current_time", 10)
         self.start_nodes = self.create_publisher(Empty, "start_node", 10)
+        self.time_offset = self.create_publisher(Int32MultiArray, "time_offset", 10)
 
         for num in range(1, self.num_robots + 1):
             if self.robot_num == 1 and num == 1:
@@ -93,6 +99,12 @@ class NetworkStartupNode(Node):
                 self.test_pub.publish(
                     String(data=f"{self.robot_name} passed num == own num")
                 )
+                self.create_subscription(
+                    TimeSourced,
+                    f"/robot{num}/current_time",
+                    self.test_time_offset_callback,
+                    10,
+                )
             else:
                 self.test_pub.publish(
                     String(data=f"{self.robot_name} creating subscriptions to topics")
@@ -102,6 +114,12 @@ class NetworkStartupNode(Node):
                 )
                 self.create_subscription(
                     String, f"/robot{num}/heard", self.heard_callback, 10
+                )
+                self.create_subscription(
+                    TimeSourced,
+                    f"/robot{num}/current_time",
+                    self.test_time_offset_callback,
+                    10,
                 )
                 self.create_subscription(
                     String, "robot1/start_timer", self.start_timer_callback, 10
@@ -181,8 +199,33 @@ class NetworkStartupNode(Node):
         send_time._source_id = self.robot_name
         send_time.msg_id = str(self.time_counter)
         send_time.nanosec = int((self.time_current) / 10**3)
-        self.test_pub.publish(String(data=f"current time {send_time.nanosec}"))
+        # self.test_pub.publish(String(data=f"current time {send_time.nanosec}"))
         self.current_time.publish(send_time)
+
+    def test_time_offset_callback(self, msg: TimeSourced):
+        source_robot = msg.source_id
+        msg_num = int(msg.msg_id)
+        robot_time_nano = msg.nanosec
+
+        if msg_num == 200:
+
+            if not all(x != 0 for x in self.robot_current_times):
+                self.robot_current_times[int(source_robot[5]) - 1] = robot_time_nano
+                self.test_pub.publish(
+                    String(
+                        data=f"in test_time_offset_callback: {source_robot} -- {msg_num} -- {robot_time_nano} -- {self.robot_current_times} -- {self.robot_time_offsets}"
+                    )
+                )
+        if all(x != 0 for x in self.robot_current_times):
+            self.robot_time_offsets = [
+                t - self.robot_current_times[self.robot_num - 1]
+                for t in self.robot_current_times
+            ]
+            if self.sent_offset_message == False:
+                time_offsets_msg = Int32MultiArray()
+                time_offsets_msg.data = self.robot_time_offsets
+                self.time_offset.publish(time_offsets_msg)
+                self.sent_offset_message = True
 
 
 def main(args=None):
