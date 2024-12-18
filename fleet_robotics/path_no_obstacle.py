@@ -18,20 +18,12 @@ class PathPlanningNode(Node):
         )
         self.current_pose = None  # Current robot pose (x, y, theta)world frame
 
-        # goal status
-        self.declare_parameter(
-            f"{self.robot_name}_goal", rclpy.Parameter.Type.DOUBLE_ARRAY
-        )
-        self.goal_pose = (
-            self.get_parameter(f"{self.robot_name}_goal")
-            .get_parameter_value()
-            .double_array_value
-        )  # goal pose (x, y) in world frame
-
         # map state
         self.declare_parameter("square_size", rclpy.Parameter.Type.DOUBLE)
         self.declare_parameter("grid_width", rclpy.Parameter.Type.INTEGER)
         self.declare_parameter("grid_height", rclpy.Parameter.Type.INTEGER)
+        self.declare_parameter("obstacle_x", rclpy.Parameter.Type.DOUBLE_ARRAY)
+        self.declare_parameter("obstacle_y", rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.grid_size = (
             self.get_parameter("square_size").get_parameter_value().double_value
         )
@@ -41,6 +33,30 @@ class PathPlanningNode(Node):
         self.grid_height = (
             self.get_parameter("grid_height").get_parameter_value().integer_value
         )
+
+        self.obstacle_pose_x = (
+            self.get_parameter("obstacle_x").get_parameter_value().double_array_value
+        )
+
+        self.obstacle_pose_y = (
+            self.get_parameter("obstacle_y").get_parameter_value().double_array_value
+        )
+
+        self.obstacle_list  = []
+        for index, __ in enumerate(self.obstacle_pose_x):
+            self.obstacle_list.append((self.obstacle_pose_x[index], self.obstacle_pose_y[index]))
+
+        # goal status
+        self.declare_parameter(
+            f"{self.robot_name}_goal", rclpy.Parameter.Type.DOUBLE_ARRAY
+        )
+        self.goal_pose = (
+            self.get_parameter(f"{self.robot_name}_goal")
+            .get_parameter_value()
+            .double_array_value
+        )  # goal pose (x, y) in world frame
+        self.discrete_goal = self.translate_world_to_discrete(self.goal_pose)
+
 
         # Subscribers
         self.create_subscription(
@@ -88,22 +104,18 @@ class PathPlanningNode(Node):
         Callback function that occurs when the motion_execution node is ready
         to receive its next step.
         """
-        if self.current_pose is None or self.goal_pose is None:
-            return
-
         # Translate poses and calculate next step
-        discrete_current = self.translate_world_to_discrete(self.current_pose)
-        discrete_goal = self.translate_world_to_discrete(self.goal_pose)
-        self.goal_pose = discrete_goal
+        if self.current_pose is not None:
+            discrete_current = self.translate_world_to_discrete(self.current_pose)
+    
+            if self.discrete_goal != discrete_current:
+                next_pose_discrete = self.plan_next_pose(discrete_current)
 
-        if discrete_goal != discrete_current:
-            next_pose_discrete = self.plan_next_pose(discrete_current)
-
-            # Publish the next pose
-            if next_pose_discrete:
-                self.send_next_step(next_pose_discrete)
-        else:
-            self.get_logger().info("Path planning finished!")
+                # Publish the next pose
+                if next_pose_discrete:
+                    self.send_next_step(next_pose_discrete)
+            else:
+                self.get_logger().info("Path planning finished!")
 
     def send_next_step(self, next_step: tuple):
         """
@@ -113,6 +125,7 @@ class PathPlanningNode(Node):
         pose_msg = PoseStampedSourced()
 
         # assign proper world coordinates
+        self.get_logger().info(f"Sending next step: {next_step}")
         world_next_pose = self.translate_discrete_to_world(next_step)
         pose_msg.pose.position.x = world_next_pose[0]
         pose_msg.pose.position.y = world_next_pose[1]
@@ -151,14 +164,22 @@ class PathPlanningNode(Node):
 
         min_distance = float("inf")
         next_pose_discrete = None
+
+        obstacle_discrete = []
+        for obstacle in self.obstacle_list:
+            obstacle_discrete.append(self.translate_world_to_discrete(obstacle))
+
         for grid in grids_around:
-            distance = abs(self.goal_pose[0] - grid[0]) + abs(
-                self.goal_pose[1] - grid[1]
-            )
-            if distance < min_distance:
-                min_distance = distance
-                next_pose_discrete = grid
-        return next_pose_discrete
+            if grid not in obstacle_discrete:
+                distance = math.sqrt((self.discrete_goal[0] - grid[0])**2 + (self.discrete_goal[1] - grid[1]
+                )**2)
+                if distance < min_distance:
+                    self.get_logger().info(f"Potential step {grid} has smallest distance of {distance}")
+                    min_distance = distance
+                    next_pose_discrete = grid
+            else:
+                self.get_logger().info(f"obstacle in way at {grid}")
+            return next_pose_discrete
 
 
 def main(args=None):
