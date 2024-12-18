@@ -1,8 +1,7 @@
 import math
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Bool
-from geometry_msgs.msg import Pose
+from std_msgs.msg import Bool, Empty
 
 from fleet_robotics_msgs.msg import PoseStampedSourced
 
@@ -42,9 +41,11 @@ class PathPlanningNode(Node):
             self.get_parameter("obstacle_y").get_parameter_value().double_array_value
         )
 
-        self.obstacle_list  = []
+        self.obstacle_list = []
         for index, __ in enumerate(self.obstacle_pose_x):
-            self.obstacle_list.append((self.obstacle_pose_x[index], self.obstacle_pose_y[index]))
+            self.obstacle_list.append(
+                (self.obstacle_pose_x[index], self.obstacle_pose_y[index])
+            )
 
         # goal status
         self.declare_parameter(
@@ -57,11 +58,11 @@ class PathPlanningNode(Node):
         )  # goal pose (x, y) in world frame
         self.discrete_goal = self.translate_world_to_discrete(self.goal_pose)
 
-
         # Subscribers
         self.create_subscription(
             PoseStampedSourced, "pose_estimate", self.current_pose_callback, 10
         )
+        self.create_subscription(Empty, "start_node", self.new_step_callback, 10)
         self.create_subscription(Bool, "step_status", self.new_step_callback, 10)
 
         # Publishers
@@ -107,7 +108,7 @@ class PathPlanningNode(Node):
         # Translate poses and calculate next step
         if self.current_pose is not None:
             discrete_current = self.translate_world_to_discrete(self.current_pose)
-    
+
             if self.discrete_goal != discrete_current:
                 next_pose_discrete = self.plan_next_pose(discrete_current)
 
@@ -171,10 +172,14 @@ class PathPlanningNode(Node):
 
         for grid in grids_around:
             if grid not in obstacle_discrete:
-                distance = math.sqrt((self.discrete_goal[0] - grid[0])**2 + (self.discrete_goal[1] - grid[1]
-                )**2)
+                distance = math.sqrt(
+                    (self.discrete_goal[0] - grid[0]) ** 2
+                    + (self.discrete_goal[1] - grid[1]) ** 2
+                )
                 if distance < min_distance:
-                    self.get_logger().info(f"Potential step {grid} has smallest distance of {distance}")
+                    self.get_logger().info(
+                        f"Potential step {grid} has smallest distance of {distance}"
+                    )
                     min_distance = distance
                     next_pose_discrete = grid
             else:
