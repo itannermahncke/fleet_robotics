@@ -100,11 +100,9 @@ class MotionExecutionNode(Node):
 
             # if angle error is significant, correct
             if ang_error > self.ang_tol:
-                self.get_logger().info(f"Correcting angular: {ang_error}")
                 twist.angular.z = self.max_ang_vel * ang_error / abs(ang_error)
             # if lin error is significant, correct
             elif lin_error > self.lin_tol:
-                self.get_logger().info(f"Correcting linear: {lin_error}")
                 twist.linear.x = self.max_lin_vel * lin_error / abs(lin_error)
             # if within tolerance
             else:
@@ -117,7 +115,6 @@ class MotionExecutionNode(Node):
                 twist.linear.x == self.latest_twist.linear.x
                 and twist.angular.z == self.latest_twist.angular.z
             ):
-                self.get_logger().info(f"Driving: {twist.linear}, {twist.angular}")
                 self.vel_pub.publish(twist)
                 self.latest_twist = twist
 
@@ -125,9 +122,6 @@ class MotionExecutionNode(Node):
         """
         Calculate error between current pose and desired pose.
         """
-        self.get_logger().info(
-            f"Correcting between {round(pose.position.x, 4)}, {round(pose.position.y, 4)} and {round(dest.position.x, 4)}, {round(dest.position.y, 4)}"
-        )
         delta_x = round(dest.position.x - pose.position.x, 4)
         delta_y = round(dest.position.y - pose.position.y, 4)
         heading = self.euler_from_quaternion(
