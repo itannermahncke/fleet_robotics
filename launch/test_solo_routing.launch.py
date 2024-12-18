@@ -31,7 +31,8 @@ def generate_launch_description():
                 remappings=[
                     ("pose_estimate", f"{name_str}/pose_estimate"),
                     ("next_step", f"{name_str}/next_step"),
-                    ("next_step", f"{name_str}/step_status"),
+                    ("step_status", f"{name_str}/step_status"),
+                    ("start_node", f"{name_str}/start_node"),
                 ],
             ),
             Node(
