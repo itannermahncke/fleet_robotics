@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import Bool
+from neato2_interfaces.msg import Bump
 from geometry_msgs.msg import Twist, Pose
 from fleet_robotics_msgs.msg import CrashDetection, PoseStampedSourced
 
@@ -22,6 +23,8 @@ class MotionExecutionNode(Node):
         """
         super().__init__("motion_execution")
 
+        # bump stop
+        self.create_subscription(Bump, "bump", self.bump_callback, 10)
         # subscribe to the crash handler and the path planner
         self.crash_sub = self.create_subscription(
             CrashDetection, "step_clearance", self.clearance_callback, 10
@@ -48,9 +51,14 @@ class MotionExecutionNode(Node):
         # attributes
         self.steps: deque[PoseStampedSourced] = deque(maxlen=10)
         self.max_ang_vel = 0.4
-        self.max_lin_vel = 0.299
-        self.ang_tol = 0.05
+        self.max_lin_vel = 0.29
+        self.ang_tol = 0.075
         self.lin_tol = 0.2
+
+    def bump_callback(self, bump: Bump):
+        if bump.left_front or bump.left_side or bump.right_front or bump._right_side:
+            self.vel_pub.publish(Twist())
+            self.pub_timer.destroy()
 
     def pose_callback(self, pose_msg: PoseStampedSourced):
         """
@@ -99,12 +107,12 @@ class MotionExecutionNode(Node):
             )
 
             # if angle error is significant, correct
-            if ang_error > self.ang_tol:
-                self.get_logger().info(f"Correcting angular: {ang_error}")
+            if abs(ang_error) > self.ang_tol:
+                self.get_logger().info(f"Ang error: {ang_error}")
                 twist.angular.z = self.max_ang_vel * ang_error / abs(ang_error)
             # if lin error is significant, correct
-            elif lin_error > self.lin_tol:
-                self.get_logger().info(f"Correcting linear: {lin_error}")
+            elif abs(lin_error) > self.lin_tol:
+                self.get_logger().info(f"Lin error: {lin_error}")
                 twist.linear.x = self.max_lin_vel * lin_error / abs(lin_error)
             # if within tolerance
             else:
@@ -117,7 +125,6 @@ class MotionExecutionNode(Node):
                 twist.linear.x == self.latest_twist.linear.x
                 and twist.angular.z == self.latest_twist.angular.z
             ):
-                self.get_logger().info(f"Driving: {twist.linear}, {twist.angular}")
                 self.vel_pub.publish(twist)
                 self.latest_twist = twist
 
@@ -125,9 +132,6 @@ class MotionExecutionNode(Node):
         """
         Calculate error between current pose and desired pose.
         """
-        self.get_logger().info(
-            f"Correcting between {round(pose.position.x, 4)}, {round(pose.position.y, 4)} and {round(dest.position.x, 4)}, {round(dest.position.y, 4)}"
-        )
         delta_x = round(dest.position.x - pose.position.x, 4)
         delta_y = round(dest.position.y - pose.position.y, 4)
         heading = self.euler_from_quaternion(

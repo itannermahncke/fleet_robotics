@@ -31,6 +31,7 @@ class ExtendedKalmanFilterNode(Node):
         self.pose_pub = self.create_publisher(PoseStampedSourced, "pose_estimate", 10)
 
         # EKF attributes
+        self.ekf = ExtendedKalmanFilter()
 
 
 def main(args=None):
