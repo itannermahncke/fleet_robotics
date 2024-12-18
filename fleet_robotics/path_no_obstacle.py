@@ -154,14 +154,14 @@ class PathPlanningNode(Node):
         """
         grids_around = []
         grids_around_add = [
-            # (-1, 1),
+            (-1, 1),
             (0, 1),
-            # (1, 1),
+            (1, 1),
             (-1, 0),
             (1, 0),
-            # (-1, -1),
+            (-1, -1),
             (0, -1),
-            # (1, -1),
+            (1, -1),
         ]
         for grids in grids_around_add:
             result = tuple(x + y for x, y in zip(current_pose_discrete, grids))
