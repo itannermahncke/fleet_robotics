@@ -1,0 +1,6 @@
+/**:
+  ros__parameters:
+    num_robots: 1
+
+    robot1_initial_pose: [0.0, 0.0, 0.0]
+    robot1_goal: [1.25, 1.75]

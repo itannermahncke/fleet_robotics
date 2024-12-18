@@ -5,13 +5,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ page.title | escape }}</title>
   <link rel="stylesheet" href="{{ '/assets/main.css' | relative_url }}">
+  <style>
+    /* Add styles for the dropdown */
+    .sidebar {
+      width: 200px;
+      background-color: #f4f4f4;
+      padding: 10px;
+    }
+
+    .dropdown {
+      position: relative; /* Keep this as relative */
+    }
+
+    /* Dropdown content starts hidden */
+    .dropdown-content {
+      display: none; /* Hidden by default */
+      list-style-type: none;
+      padding-left: 20px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      margin-top: 5px; /* Optional: Add some spacing between parent and dropdown */
+    }
+
+    /* Style dropdown items */
+    .dropdown-content li {
+      padding: 5px 10px;
+    }
+
+    /* Show dropdown on hover */
+    .dropdown:hover .dropdown-content {
+      display: block; /* Display the dropdown */
+    }
+
+    /* Dropdown links */
+    .dropdown-content li a {
+      text-decoration: none;
+      color: #333;
+    }
+
+    .dropdown-content li a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
   <!-- Sidebar Section -->
   <div class="sidebar">
     <ul>
       {% for item in site.nav %}
-        <li><a href="{{ item.link }}">{{ item.name }}</a></li>
+        {% if item.subitems %}
+          <li class="dropdown">
+            <a href="{{ item.link }}">{{ item.name }}</a>
+            <ul class="dropdown-content">
+              {% for subitem in item.subitems %}
+                <li><a href="{{ subitem.link }}">{{ subitem.name }}</a></li>
+              {% endfor %}
+            </ul>
+          </li>
+        {% else %}
+          <li><a href="{{ item.link }}">{{ item.name }}</a></li>
+        {% endif %}
       {% endfor %}
     </ul>
   </div>
