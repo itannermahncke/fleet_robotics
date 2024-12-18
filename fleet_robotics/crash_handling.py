@@ -60,13 +60,13 @@ class CrashHandlingNode(Node):
             else:
                 # note that subscribers all have the same callback
                 self.create_subscription(
-                    PoseStamped,
+                    PoseStampedSourced,
                     f"/robot{num}/pose_estimate",
                     self.generic_pose_callback,
                     10,
                 )
                 self.create_subscription(
-                    PoseStamped,
+                    PoseStampedSourced,
                     f"/robot{num}/next_step",
                     self.generic_step_callback,
                     10,
@@ -76,7 +76,7 @@ class CrashHandlingNode(Node):
 
         # subscribe to local next steps
         self.local_step_sub = self.create_subscription(
-            PoseStamped,
+            PoseStampedSourced,
             f"/{self.robot_name}/next_step",
             self.local_step_callback,
             10,
@@ -96,25 +96,28 @@ class CrashHandlingNode(Node):
         """
         self.local_time = Time.from_msg(time)
 
-    def generic_pose_callback(self, pose_msg: PoseStamped):
+    def generic_pose_callback(self, pose_msg: PoseStampedSourced):
         """
         Callback when any external pose is received.
         """
         # assumes frame_id is robot_name (formatted robotN)
         self.latest_poses[int(pose_msg.header.frame_id[-1])] = pose_msg
 
-    def generic_step_callback(self, pose_msg: PoseStamped):
+    def generic_step_callback(self, pose_msg: PoseStampedSourced):
         """
         Callback when any external motion step is received.
         """
         # assumes frame_id is robot_name (formatted robotN)
         self.latest_steps[int(pose_msg.header.frame_id[-1])] = pose_msg
 
-    def local_step_callback(self, my_pose_msg: PoseStamped):
+    def local_step_callback(self, my_pose_msg: PoseStampedSourced):
         """
         Callback when any local motion step is received. This is when crash
         handling is performed.
         """
+        self.get_logger().info(
+            f"Crash handler heard {my_pose_msg.pose.position} from {my_pose_msg.source_id}"
+        )
         # assumes frame_id is robot_name (formatted robotN)
         self.my_latest_step = my_pose_msg
 
@@ -122,21 +125,22 @@ class CrashHandlingNode(Node):
         collision_agents = [self.robot_name]
 
         # check all robot poses/steps
-        for robot in range(0, self.num_robots):
-            remote_pose = self.latest_poses[robot]
-            remote_step = self.latest_steps[robot]
+        for robot in range(1, self.num_robots):
+            if robot != self.robot_num:
+                remote_pose = self.latest_poses[robot]
+                remote_step = self.latest_steps[robot]
 
-            # if any remote poses are in local step -- execute body crash protocol
-            if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
-                self, my_pose_msg, remote_pose
-            ):
-                self.crash_reported()
-                return
-            # if any remote steps are in local step -- note the collision for later
-            elif self.pose_is_recent(remote_step) and self.determine_crash_radius(
-                my_pose_msg, remote_step
-            ):
-                collision_agents.append(robot)
+                # if any remote poses are in local step -- execute body crash protocol
+                if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
+                    self, my_pose_msg, remote_pose
+                ):
+                    self.crash_reported()
+                    return
+                # if any remote steps are in local step -- note the collision for later
+                elif self.pose_is_recent(remote_step) and self.determine_crash_radius(
+                    my_pose_msg, remote_step
+                ):
+                    collision_agents.append(robot)
 
         # evaluate the severity of the path crash
         if len(collision_agents) > 1:
@@ -198,7 +202,7 @@ class CrashHandlingNode(Node):
         ## return true/false if over a threshold
         return abs(actual_time - self.local_time) < self.RECENCY_REQ
 
-    def crash_reported(self, pose: PoseStamped):
+    def crash_reported(self, pose: PoseStampedSourced):
         """
         In the event of an anticipated body crash, the local Neato will not
         move until the body crash is no longer a concern, and the partner Neato
@@ -209,11 +213,14 @@ class CrashHandlingNode(Node):
         publishes a crash detection immediately, preventing the Neato from
         taking that step at that time.
         """
+        self.get_logger().info(f"Pose {pose.pose.position} sounds BAD!!!")
         self.crash_pub.publish(
-            CrashDetection(header=pose.header, pose=pose.pose, clearance=False)
+            CrashDetection(
+                header=pose.header, msg_id=pose.msg_id, pose=pose.pose, clearance=False
+            )
         )
 
-    def path_crash_reported(self, pose: PoseStamped, robot_list: list[str]):
+    def path_crash_reported(self, pose: PoseStampedSourced, robot_list: list[str]):
         """
         In the event of an anticipated path crash, the local Neato will determine
         its priority relevant to the partner Neato, confirm that both agree on this
@@ -227,12 +234,15 @@ class CrashHandlingNode(Node):
         else:
             self.crash_reported(pose)
 
-    def no_crash_reported(self, pose: PoseStamped):
+    def no_crash_reported(self, pose: PoseStampedSourced):
         """
         Greenlight the current step.
         """
+        self.get_logger().info(f"Pose {pose.msg_id} sounds good!")
         self.crash_pub.publish(
-            CrashDetection(header=pose.header, pose=pose.pose, clearance=True)
+            CrashDetection(
+                header=pose.header, msg_id=pose.msg_id, pose=pose.pose, clearance=True
+            )
         )
 
 

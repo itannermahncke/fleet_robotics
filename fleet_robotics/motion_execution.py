@@ -2,10 +2,7 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import Bool
-from geometry_msgs.msg import PoseStamped, Twist, Pose
-
-from tf_transformations import euler_from_quaternion
-
+from geometry_msgs.msg import Twist, Pose
 from fleet_robotics_msgs.msg import CrashDetection, PoseStampedSourced
 
 from collections import deque
@@ -38,19 +35,22 @@ class MotionExecutionNode(Node):
             PoseStampedSourced, "pose_estimate", self.pose_callback, 10
         )
         self.latest_pose = None
-        self.latest_twist = None
+        self.latest_twist = Twist()
+        self.next_step = None
 
         # publish cmd velocities to Neato
         self.vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
+        self.pub_timer = self.create_timer(0.05, self.execute_path)
 
         # publish when a step has been completed
-        self.goal_pub = self.create_publisher(Bool, "goal_status", 10)
+        self.status_pub = self.create_publisher(Bool, "step_status", 10)
 
         # attributes
-        self.clearances: deque[CrashDetection] = deque(maxlen=10)
-        self.max_ang_vel = 0.49
-        self.max_lin_vel = 0.29
-        self.tolerance = 0.05
+        self.steps: deque[PoseStampedSourced] = deque(maxlen=10)
+        self.max_ang_vel = 0.4
+        self.max_lin_vel = 0.299
+        self.ang_tol = 0.05
+        self.lin_tol = 0.2
 
     def pose_callback(self, pose_msg: PoseStampedSourced):
         """
@@ -63,60 +63,103 @@ class MotionExecutionNode(Node):
         When the crash handler informs this node about the clearance for a
         particular pose/step, note it here.
         """
-        self.clearances.append(crash_msg)
+        self.get_logger().info(f"Analyzing a crash msg id: {crash_msg.msg_id}")
+        for step in self.steps:
+            # confirm clearance
+            if crash_msg.clearance and step.msg_id == crash_msg.msg_id:
+                # don't interrupt a current step
+                if self.next_step is None:
+                    self.get_logger().info(
+                        f"Tests passed! Executing message {crash_msg.msg_id}"
+                    )
+                    self.next_step = step
+                    self.steps.remove(step)
+                    return
 
     def step_callback(self, pose_msg: PoseStampedSourced):
         """
         When a new pose step is received, make sure it is not at risk of
         crashing. Then, execute.
         """
-        for crash in self.clearances:
-            if crash.clearance and pose_msg.msg_id == crash.msg_id:
-                self.execute_path()
+        self.steps.append(pose_msg)
 
     ## FOLLOWING CODE IS STOLEN FROM WALTER... MAKE SURE TO TEST
     def execute_path(self):
         """
         Calculate wheel speeds and publish.
         """
-        twist = Twist()
-        # calculate error
-        lin_error, ang_error = self.calculate_error()
+        if self.next_step is not None:
+            # setup
+            step = self.next_step
+            twist = Twist()
 
-        # if angle error is significant, correct
-        if ang_error > self.tolerance:
-            twist.angular.z = self.max_ang_vel
-        # if lin error is significant, correct
-        elif lin_error > self.tolerance:
-            twist.linear.x = self.max_lin_vel
-        # if within tolerance
-        else:
-            self.goal_pub.publish(Bool(data=True))
+            # calculate error
+            lin_error, ang_error = self.calculate_error(
+                pose=self.latest_pose, dest=step.pose
+            )
 
-        # publish OR skip if identical to latest
-        if not (
-            twist.linear.x == self.latest_twist.linear.x
-            and twist.angular.z == self.latest_twist.angular.z
-        ):
-            self.vel_pub.publish(twist)
-            self.latest_twist = twist
+            # if angle error is significant, correct
+            if ang_error > self.ang_tol:
+                self.get_logger().info(f"Correcting angular: {ang_error}")
+                twist.angular.z = self.max_ang_vel * ang_error / abs(ang_error)
+            # if lin error is significant, correct
+            elif lin_error > self.lin_tol:
+                self.get_logger().info(f"Correcting linear: {lin_error}")
+                twist.linear.x = self.max_lin_vel * lin_error / abs(lin_error)
+            # if within tolerance
+            else:
+                self.get_logger().info("No error!")
+                self.status_pub.publish(Bool(data=True))
+                self.next_step = None
+
+            # publish OR skip if identical to latest
+            if not (
+                twist.linear.x == self.latest_twist.linear.x
+                and twist.angular.z == self.latest_twist.angular.z
+            ):
+                self.get_logger().info(f"Driving: {twist.linear}, {twist.angular}")
+                self.vel_pub.publish(twist)
+                self.latest_twist = twist
 
     def calculate_error(self, pose: Pose, dest: Pose):
         """
         Calculate error between current pose and desired pose.
         """
-        delta_x = dest.position.x - pose.position.x
-        delta_y = dest.position.y - pose.position.y
-        heading = euler_from_quaternion(
+        self.get_logger().info(
+            f"Correcting between {round(pose.position.x, 4)}, {round(pose.position.y, 4)} and {round(dest.position.x, 4)}, {round(dest.position.y, 4)}"
+        )
+        delta_x = round(dest.position.x - pose.position.x, 4)
+        delta_y = round(dest.position.y - pose.position.y, 4)
+        heading = self.euler_from_quaternion(
             pose.orientation.x,
             pose.orientation.y,
             pose.orientation.z,
             pose.orientation.w,
-        )
-        lin_error = math.sqrt(delta_x**2 + delta_y**2)
-        ang_error = math.atan2(delta_y, delta_x) - heading
+        )[2]
+        lin_error = round(math.sqrt(delta_x**2 + delta_y**2), 4)
+        ang_error = round(math.atan2(delta_y, delta_x) - heading, 4)
 
         return lin_error, ang_error
+
+    def euler_from_quaternion(self, x, y, z, w):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw). Credit to
+        AutomaticAddison for this code lol
+        """
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+
+        return roll_x, pitch_y, yaw_z  # in radians
 
 
 def main(args=None):
