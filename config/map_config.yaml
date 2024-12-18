@@ -3,5 +3,9 @@
     grid_width: 2
     grid_height: 5
     square_size: 0.5
-    obstacle_x: [0.75, 1.25]
-    obstacle_y: [0.0, 2.75]
+    obstacle_x: [0.75, 0.75]
+<<<<<<< HEAD
+    obstacle_y: [0.75, 1.25]
+=======
+    obstacle_y: [0.0, 1.25]
+>>>>>>> 4aeffc3f782c1d7d3a058fc9153af023b2189908

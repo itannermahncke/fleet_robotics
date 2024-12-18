@@ -28,6 +28,7 @@ def generate_launch_description():
         "current_time",
         "start_timer",
         "start_node",
+        "time_offset",
     ]
     remap_list = []
     robot_remap = []
