@@ -21,7 +21,14 @@ def generate_launch_description():
         {"robot_name": robot_names[3]},
     ]  # save as param and pass to all nodes
 
-    topic_names = ["speak", "heard", "comm_check", "current_time"]
+    topic_names = [
+        "speak",
+        "heard",
+        "comm_check",
+        "current_time",
+        "start_timer",
+        "start_node",
+    ]
     remap_list = []
     robot_remap = []
     for robot in robot_names:
@@ -32,7 +39,6 @@ def generate_launch_description():
         robot_remap = []
 
     # [("example_topic", f"{robot_names[num]}/example_topic")]
-
     launch_description = []
     for num in range(len(robot_names)):
         launch_description.append(
@@ -41,6 +47,7 @@ def generate_launch_description():
                 executable="network_startup",
                 parameters=[fleet_info, robot_name_param[num]],
                 remappings=remap_list[num],
+                name=f"{robot_names[num]}_network_startup",
             )
         )
     return LaunchDescription(launch_description)
