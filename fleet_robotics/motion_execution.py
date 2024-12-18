@@ -2,6 +2,7 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import Bool
+from neato2_interfaces.msg import Bump
 from geometry_msgs.msg import Twist, Pose
 from fleet_robotics_msgs.msg import CrashDetection, PoseStampedSourced
 
@@ -22,6 +23,8 @@ class MotionExecutionNode(Node):
         """
         super().__init__("motion_execution")
 
+        # bump stop
+        self.create_subscription(Bump, "bump", self.bump_callback, 10)
         # subscribe to the crash handler and the path planner
         self.crash_sub = self.create_subscription(
             CrashDetection, "step_clearance", self.clearance_callback, 10
@@ -51,6 +54,11 @@ class MotionExecutionNode(Node):
         self.max_lin_vel = 0.29
         self.ang_tol = 0.075
         self.lin_tol = 0.2
+
+    def bump_callback(self, bump: Bump):
+        if bump.left_front or bump.left_side or bump.right_front or bump._right_side:
+            self.vel_pub.publish(Twist())
+            self.pub_timer.destroy()
 
     def pose_callback(self, pose_msg: PoseStampedSourced):
         """
