@@ -78,7 +78,7 @@ class PathPlanningNode(Node):
         """
         discrete_coord_x = math.floor(world_pose[0] / self.grid_size)
         discrete_coord_y = math.floor(world_pose[1] / self.grid_size)
-        return [discrete_coord_x, discrete_coord_y]
+        return (discrete_coord_x, discrete_coord_y)
 
     def translate_discrete_to_world(self, discrete_pose: tuple):
         """
@@ -88,7 +88,7 @@ class PathPlanningNode(Node):
         """
         world_pose_x = discrete_pose[0] * self.grid_size + (self.grid_size / 2)
         world_pose_y = discrete_pose[1] * self.grid_size + (self.grid_size / 2)
-        return [world_pose_x, world_pose_y]
+        return (world_pose_x, world_pose_y)
 
     def current_pose_callback(self, pose_msg: PoseStampedSourced):
         """
@@ -150,14 +150,14 @@ class PathPlanningNode(Node):
         """
         grids_around = []
         grids_around_add = [
-            (-1, 1),
+            # (-1, 1),
             (0, 1),
-            (1, 1),
+            # (1, 1),
             (-1, 0),
             (1, 0),
-            (-1, -1),
+            # (-1, -1),
             (0, -1),
-            (1, -1),
+            # (1, -1),
         ]
         for grids in grids_around_add:
             result = tuple(x + y for x, y in zip(current_pose_discrete, grids))
@@ -184,7 +184,7 @@ class PathPlanningNode(Node):
                     next_pose_discrete = grid
             else:
                 self.get_logger().info(f"obstacle in way at {grid}")
-            return next_pose_discrete
+        return next_pose_discrete
 
 
 def main(args=None):

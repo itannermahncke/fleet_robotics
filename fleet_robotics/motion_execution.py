@@ -49,7 +49,7 @@ class MotionExecutionNode(Node):
         self.steps: deque[PoseStampedSourced] = deque(maxlen=10)
         self.max_ang_vel = 0.4
         self.max_lin_vel = 0.299
-        self.ang_tol = 0.05
+        self.ang_tol = 0.1
         self.lin_tol = 0.2
 
     def pose_callback(self, pose_msg: PoseStampedSourced):
@@ -99,11 +99,11 @@ class MotionExecutionNode(Node):
             )
 
             # if angle error is significant, correct
-            if ang_error > self.ang_tol:
+            if abs(ang_error) > self.ang_tol:
                 self.get_logger().info(f"Ang error: {ang_error}")
                 twist.angular.z = self.max_ang_vel * ang_error / abs(ang_error)
             # if lin error is significant, correct
-            elif lin_error > self.lin_tol:
+            elif abs(lin_error) > self.lin_tol:
                 self.get_logger().info(f"Lin error: {lin_error}")
                 twist.linear.x = self.max_lin_vel * lin_error / abs(lin_error)
             # if within tolerance
