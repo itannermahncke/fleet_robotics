@@ -95,11 +95,15 @@ class PathPlanningNode(Node):
         discrete_current = self.translate_world_to_discrete(self.current_pose)
         discrete_goal = self.translate_world_to_discrete(self.goal_pose)
         self.goal_pose = discrete_goal
-        next_pose_discrete = self.plan_next_pose(discrete_current)
 
-        # Publish the next pose
-        if next_pose_discrete:
-            self.send_next_step(next_pose_discrete)
+        if discrete_goal != discrete_current:
+            next_pose_discrete = self.plan_next_pose(discrete_current)
+
+            # Publish the next pose
+            if next_pose_discrete:
+                self.send_next_step(next_pose_discrete)
+        else:
+            self.get_logger().info("Path planning finished!")
 
     def send_next_step(self, next_step: tuple):
         """
