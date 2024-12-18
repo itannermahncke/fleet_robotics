@@ -46,6 +46,9 @@ class PathPlanningNode(Node):
             self.obstacle_list.append(
                 (self.obstacle_pose_x[index], self.obstacle_pose_y[index])
             )
+        self.obstacle_discrete = []
+        for obstacle in self.obstacle_list:
+            self.obstacle_discrete.append(self.translate_world_to_discrete(obstacle))
 
         # goal status
         self.declare_parameter(
@@ -166,12 +169,8 @@ class PathPlanningNode(Node):
         min_distance = float("inf")
         next_pose_discrete = None
 
-        obstacle_discrete = []
-        for obstacle in self.obstacle_list:
-            obstacle_discrete.append(self.translate_world_to_discrete(obstacle))
-
         for grid in grids_around:
-            if grid not in obstacle_discrete:
+            if grid not in self.obstacle_discrete:
                 distance = math.sqrt(
                     (self.discrete_goal[0] - grid[0]) ** 2
                     + (self.discrete_goal[1] - grid[1]) ** 2

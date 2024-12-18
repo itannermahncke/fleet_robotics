@@ -48,8 +48,8 @@ class MotionExecutionNode(Node):
         # attributes
         self.steps: deque[PoseStampedSourced] = deque(maxlen=10)
         self.max_ang_vel = 0.4
-        self.max_lin_vel = 0.299
-        self.ang_tol = 0.1
+        self.max_lin_vel = 0.29
+        self.ang_tol = 0.075
         self.lin_tol = 0.2
 
     def pose_callback(self, pose_msg: PoseStampedSourced):
