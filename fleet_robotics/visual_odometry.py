@@ -17,6 +17,7 @@ from fleet_robotics_msgs.msg import PoseStampedSourced
 from typing import List
 
 import requests
+import matplotlib.pyplot as plt
 
 # Need to run this
 # ros2 run image_transport republish raw compressed --ros-args -r in:=/camera/image_raw -r out:=/camera/image/compressed
@@ -80,10 +81,13 @@ class VisualOdometryNode(Node):
         self.t = False
 
         # Publishers and Subscribers
-        self.UPDATE_RATE = 3  # sec
+        self.UPDATE_RATE = 1  # sec
+
         self.transform_timer = self.create_timer(
             self.UPDATE_RATE, self.timing
         )
+
+        # self.calibration_timer = self.create_timer(8, self.cam_calibration)
 
         # self.image_sub = self.create_subscription(
         #     Image, "camera/image_raw", self.testing_camera, 10
@@ -97,11 +101,12 @@ class VisualOdometryNode(Node):
         self.latest_pose = np.eye(4)
         self.pose_calibration = [np.eye(4)]
 
-    # def cam_calibration(self):
-    #     if (self.posemat==self.latest_pose).all:
-    #         self.pose_calibration.append(self.posemat)
-    #     print("THE CAMERA CALIBARTION LIST OF POSES is:")
-    #     print(self.pose_calibration)
+        self.tvec = None
+
+    def cam_calibration(self):
+        self.pose_calibration.append(self.posemat)
+        print("THE CAMERA CALIBARTION LIST OF POSES is:")
+        print(self.pose_calibration)
     
     # def testing_camera(self, msg):
         # if self.t == True:
@@ -215,7 +220,7 @@ class VisualOdometryNode(Node):
                 self.current_transform[:3, :3] = rmat  # Insert the rotation matrix
                 self.current_transform[:3, 3] = tvec.flatten()  # Insert the translation vector
 
-                self.latest_pose = self.posemat
+                # self.latest_pose = self.posemat
                 # Update pose with transform
                 # self.posemat = np.add(self.current_transform, self.posemat)
 
@@ -224,9 +229,14 @@ class VisualOdometryNode(Node):
                 self.publish_visual_pose()
                 # self.cam_calibration()
 
+                self.tvec = tvec
+
                 # print(f"TRANSLATION IS {tvec}")
+                # print(f"ROTATION IS {rmat}")
+                print(f"X IS {self.posemat[0][3]}")
                 print("PUBLISHING A VISUAL POSE.....")
-                print(f"NEW POSE FORM ODOM 0,0 IS {self.posemat}")
+                # print(f"NEW POSE FORM ODOM 0,0 IS {self.posemat}")
+                print(self.posemat)
 
             else:
                 pass
@@ -294,10 +304,19 @@ class VisualOdometryNode(Node):
         matches = []
         filtered_matches = []
 
-        # Brute Force matching
-        bf = cv2.BFMatcher()
-        # BFMatcher.knnMatch() to get k best matches. In this example, we will take k=2 so that we can apply ratio test explained by D.Lowe in his paper.
-        matches = bf.knnMatch(des1, des2, k=2)
+        # # Brute Force matching
+        # bf = cv2.BFMatcher()
+        # # BFMatcher.knnMatch() to get k best matches. In this example, we will take k=2 so that we can apply ratio test explained by D.Lowe in his paper.
+        # matches = bf.knnMatch(des1, des2, k=2)
+
+        # FLANN parameters.
+        FLANN_INDEX_KDTREE = 0
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks=50) 
+    
+        # FLANN based matcher with implementation of k nearest neighbour.
+        flann = cv2.FlannBasedMatcher(index_params,search_params)
+        matches = flann.knnMatch(des1, des2, k=2)
 
         # Filter matches by distance
         for m, n in matches:
@@ -336,7 +355,7 @@ class VisualOdometryNode(Node):
             E, img1_points, img2_points, focal=self.FOCAL, pp=self.PP, mask=None
         )
 
-        return rmat, tvec, img1_points, img2_points
+        return rmat,tvec, img1_points, img2_points
 
 
 def main(args=None):
@@ -349,3 +368,4 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
+    

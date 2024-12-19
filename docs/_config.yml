@@ -20,6 +20,8 @@ nav:
         link: launch
       - name: Path Planning
         link: path_planning
+      - name: Visual Odometry
+        link: vis_odom
   - name: Progress
     link: progress
     subitems:
