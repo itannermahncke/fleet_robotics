@@ -23,7 +23,6 @@ done
 robot_names=()
 video_ports=()
 sensor_ports=()
-launch_pid=()
 
 
 #sets the names and ports for each of the robots
@@ -40,13 +39,10 @@ gscam_config_p2=" ! application/x-rtp, payload=96 ! rtpjitterbuffer ! rtph264dep
 #for each robot, this will combine the final gscam arg and then launch the neato
 for ip in "${ip_list[@]}"
 do
-    gscam_config=${gscam_config_p1}${video_ports[$iter]}${gscam_config_p2}; echo ${gscam_config}
-    echo $(gscam_config)
-    (ros2 launch neato_node2 bringup_multi.py host:=$ip robot_name:=${robot_names[iter]} udp_video_port:=${video_ports[iter]} udp_sensor_port:=${sensor_ports[iter]} gscam_config:="${gscam_config}") &
-    (ros2 launch fleet_robotics fleet_member.launch.py robot_name:=${robot_names[iter]})
-    launch_pid[iter]=$!
+    gscam_config=${gscam_config_p1}${video_ports[$iter]}${gscam_config_p2}
+    #(ros2 launch neato_node2 bringup_multi.py host:=$ip robot_name:=${robot_names[iter]} udp_video_port:=${video_ports[iter]} udp_sensor_port:=${sensor_ports[iter]} gscam_config:="${gscam_config}") &
+    echo ${num_bots}
+    (ros2 launch fleet_robotics fleet_member.launch.py robot_name:=${robot_names[iter]} num_robots:=${num_bots}) &
     ((iter++))
-    echo "........................................................................................................................................"
-    echo ${launch_pid[@]}
-    echo "........................................................................................................................................"
+    
 done

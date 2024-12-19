@@ -48,7 +48,7 @@ class NetworkStartupNode(Node):
         self.sent_offset_message = False
 
         # Test Publisher
-        self.test_pub = self.create_publisher(String, "test_pub", 10)
+        self.test_pub = self.create_publisher(String, "/test_pub", 10)
         self.test_pub.publish(
             String(
                 data=f"in init: {self.robot_name} {type(self.robot_num)} -- {self.num_robots}"
@@ -99,7 +99,7 @@ class NetworkStartupNode(Node):
                     10,
                 )
                 self.create_subscription(
-                    String, "robot1/start_timer", self.start_timer_callback, 10
+                    String, "/robot1/start_timer", self.start_timer_callback, 10
                 )
 
         timer_period = 0.2
