@@ -54,7 +54,32 @@ class ObstacleDetectionNode(Node):
                     self.generic_pose_callback,
                     10,
                 )
+    
+    def scan_callback(self):
+        """
+        """
+        self.scan_callback
 
+    def group_laser_scan_to_grid():
+        """
+        """
+        pass
+    
+    def obstacles_pos_from_laser():
+        """
+        """
+    def is_obstacle():
+        """
+        if it's a neato then don't categorize as obstacle
+        """
+    def transpose_neato_to_world():
+        """
+        """
+        pass
+
+    #if any grid has more than x lidar scans, then categorize them as an obsatacle instead of noise
+    #get the location of the obstacles
+    #assign confidence level to seen obstacles if more than one neato sees it, if conflict results, remove obstacle
 
 def main(args=None):
     rclpy.init(args=args)

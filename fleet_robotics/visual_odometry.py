@@ -8,10 +8,21 @@ from scipy.spatial.transform import Rotation
 from cv_bridge import CvBridge
 from collections import deque
 
-from geometry_msgs.msg import Transform, Pose
+from geometry_msgs.msg import Transform, Pose, PoseStamped
 from sensor_msgs.msg import Image, CompressedImage
 
+
+from fleet_robotics_msgs.msg import PoseStampedSourced
+
 from typing import List
+
+import requests
+
+# Need to run this
+# ros2 run image_transport republish raw compressed --ros-args -r in:=/camera/image_raw -r out:=/camera/image/compressed
+## TO DO LIST
+# - make a flag for only updating poses when a new image is published
+# - turn kp and des list into a deque
 
 
 class VisualOdometryNode(Node):
@@ -35,11 +46,8 @@ class VisualOdometryNode(Node):
         """ """
         super().__init__("visual_odom")
 
-        # attributes
-        self.update_rate = 0.01  # sec
-
         # Neato Camera Calibration Matrix
-        self.k = np.array(
+        self.K = np.array(
             [
                 [
                     500.68763,
@@ -55,126 +63,203 @@ class VisualOdometryNode(Node):
             ],
             dtype=np.float32,
         )
-        self.focal = (self.k[0][0] + self.k[1][1]) / 2
-        self.pp = (self.k[0][2], self.k[1][2])
+        self.FOCAL = (self.K[0][0] + self.K[1][1]) / 2
+        self.PP = (self.K[0][2], self.K[1][2])
 
-        # Pose
-        self.current_pose = np.eye(4)
-        self.latest_pose = None
-        # Pose as a 4x4 matrix - extract pose attributes
-        self.pose_history: List[Pose] = np.eye(
-            4
-        )  # need to set inital transform to inital pose
+        # Transform to apply
+        self.current_transform = np.eye(4)
+
+        # Pose relative to odom 0,0
+        self.posemat = np.eye(4) # Pose as a 4x4 matrix
 
         # MVO attrivutes
-        self.kp_list = []  # deque(maxlen=30)
-        self.des_list = []  # deque(maxlen=30)
+        self.kp_deque = deque(maxlen=20)  # deque(maxlen=30)
+        self.des_deque = deque(maxlen=20)  # deque(maxlen=30)
+        self.image_deque = deque(maxlen=20)
 
-        # Transform
-        self.pose_transform_history = np.eye(4)  # set inital transform to none
-        self.current_transform = None
-        self.combined_transform = np.eye(4)  # all transforms
+        self.t = False
 
         # Publishers and Subscribers
+        self.UPDATE_RATE = 3  # sec
         self.transform_timer = self.create_timer(
-            self.update_rate, self.publish_visual_pose
+            self.UPDATE_RATE, self.timing
         )
 
+        # self.image_sub = self.create_subscription(
+        #     Image, "camera/image_raw", self.testing_camera, 10
+        # )
         self.image_sub = self.create_subscription(
-            Image, "/image_raw", self.img_callback, 10
+            CompressedImage, "camera/image_raw/compressed", self.img_callback,10
         )
-        self.image_deque = deque(maxlen=30)
+        self.pose_pub = self.create_publisher(PoseStampedSourced, "visual_pose", 10)
 
-        self.pose_pub = self.create_publisher(Pose, "visual_pose", 10)
+        # temp variables
+        self.latest_pose = np.eye(4)
+        self.pose_calibration = [np.eye(4)]
 
-    def update_pose(self):
-        """
-        Get current pose by applying the transformation matrix to the latest pose
-        """
-        self.latest_pose = self.current_pose
-        self.current_pose = self.pose_transform_history[-1] @ self.latest_pose
-        self.pose_history.append(self.current_pose)
+    # def cam_calibration(self):
+    #     if (self.posemat==self.latest_pose).all:
+    #         self.pose_calibration.append(self.posemat)
+    #     print("THE CAMERA CALIBARTION LIST OF POSES is:")
+    #     print(self.pose_calibration)
+    
+    # def testing_camera(self, msg):
+        # if self.t == True:
+        #     np_arr = np.frombuffer(msg.data, np.uint8)
+        #     # print(f"Data size: {np_arr.size} bytes")
+        #     cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    def img_callback(self, img_msg: Image):
+            
+        #     if cv_image is None:
+        #         raise ValueError("Failed to decode image. Check the data format.")
+
+        #     self.image_deque.append(cv_image)
+        #     print(f"IAMGE DEQUE LENGTH IS {len(self.image_deque)}")
+
+        #     kp, des = self.extract_features(cv_image)
+        #     self.kp_deque.append(kp)
+        #     self.des_deque.append(des)
+
+        #     print(f"Number of features detected in frame {len(self.image_deque)} is {len(kp)}")
+        #     # print(f"Coordinates of the first keypoint in frame {kp[1].pt}")
+
+
+        #     # Feature Matching
+        #     if len(self.image_deque) > 1:
+        #         # print(f"LEGNTH OF DESCRIPTOR QUEE IS {len(self.des_deque[-2])}")
+        #         if self.des_deque[-1] is None or self.des_deque[-2] is None:
+        #             raise ValueError("Descriptor extraction failed for one or both images.")
+        #         print(type(self.des_deque[-1]), type(self.des_deque[-2]))
+        #         print(f"des1 shape: {self.des_deque[-1].shape}, des2 shape: {self.des_deque[-2].shape}") 
+        #         print(self.des_deque[-1])
+                
+        #         filtered_matches = self.match_features(
+        #             np.asarray(self.des_deque[-2], np.float32), 
+        #             np.asarray(self.des_deque[-1], np.float32),
+        #         )
+
+        #         print(f"THE NUMBER OF FILTERED MATCHS IS {len(filtered_matches)}")
+
+        #         # Estimate Motion
+        #         rmat, tvec, _, _ = self.estimate_motion(
+        #             filtered_matches, 
+        #             self.kp_deque[-2],
+        #             self.kp_deque[-1],
+        #         )
+        #         print(f"ROTATION MATRIX for frame {len(self.image_deque)-1} and {len(self.image_deque)} is: {rmat}")
+        #         print(f"TRANSLATION VECTOR for frame{len(self.image_deque)-1} and {len(self.image_deque)} is {tvec}")
+        #         # Create a 4x4 homogeneous transformation matrix
+
+        #         print(type(rmat))
+
+        #         # Create a 4x4 homogeneous transformation matrix
+        #         self.current_transform[:3, :3] = rmat  # Insert the rotation matrix
+        #         self.current_transform[:3, 3] = tvec.flatten()  # Insert the translation vector
+        #         # print(f"AFTER APPENDING THE CURRENT TRANSFORM IS {self.current_transform}")
+        #         print(f"CURRENT TRANSFORM is {self.current_transform}")
+
+        #         # Update pose with transform
+        #         self.posemat = self.current_transform @ self.posemat
+
+        #     else:
+        #         pass
+
+        #     print("CAM WORKIBG")
+        #     self.t = False
+        #     self.publish_visual_pose()
+        # else:
+        #     pass
+
+    def timing(self):
+        self.t = True
+
+    def img_callback(self, img_msg):
         """
         When a new image is received, add it to the image deque and process it
         """
-        # Append image to deque
-        self.image_deque.append(img_msg)
+        if self.t == True:
+            print("TAKING AN IMAGE")
 
-        # Convert the ROS image message to an OpenCV image
-        cv_image = CvBridge.imgmsg_to_cv2(img_msg, desired_encoding="bgr8")
+            # Turn image message into a CV image to process
+            np_arr = np.frombuffer(img_msg.data, np.uint8)
+            cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-        # Extract Features
-        kp, des = self.extract_features(cv_image)
-        self.kp_list.append(kp)
-        self.des_list.append(des)
+            self.image_deque.append(cv_image)
+            # print(f"IAMGE DEQUE LENGTH IS {len(self.image_deque)}")
 
-        # Feature Matching
-        if (
-            self.image_deque is None or len(self.image_deque) == 1
-        ):  # do nothing for first image
-            pass
+            # Extract Features
+            kp, des = self.extract_features(cv_image)
+            self.kp_deque.append(kp)
+            self.des_deque.append(des)
+
+            # print(f"Number of features detected in frame {len(self.image_deque)} is {len(kp)}")
+
+
+            # Feature Matching
+            if len(self.image_deque) > 1:       # check if there is more than one image
+                filtered_matches = self.match_features(
+                    np.asarray(self.des_deque[-2], np.float32), 
+                    np.asarray(self.des_deque[-1], np.float32),
+                )
+                print(f"THE NUMBER OF FILTERED MATCHS IS {len(filtered_matches)}")
+
+                # Estimate Motion
+                rmat, tvec, _, _ = self.estimate_motion(
+                    filtered_matches, 
+                    self.kp_deque[-2],
+                    self.kp_deque[-1],
+                )
+
+                # Create a 4x4 homogeneous transformation matrix
+                self.current_transforma = np.eye(4)
+                self.current_transform[:3, :3] = rmat  # Insert the rotation matrix
+                self.current_transform[:3, 3] = tvec.flatten()  # Insert the translation vector
+
+                self.latest_pose = self.posemat
+                # Update pose with transform
+                # self.posemat = np.add(self.current_transform, self.posemat)
+
+                self.posemat = self.current_transform @ self.posemat
+
+                self.publish_visual_pose()
+                # self.cam_calibration()
+
+                # print(f"TRANSLATION IS {tvec}")
+                print("PUBLISHING A VISUAL POSE.....")
+                print(f"NEW POSE FORM ODOM 0,0 IS {self.posemat}")
+
+            else:
+                pass
+            self.t = False
         else:
-            filtered_matches = self.match_features(
-                self.des_list[-2], self.des_list[-1], dist_threshold=0.6
-            )
+            pass
 
-        # Estimate Motion
-        rmat, tvec, _, _ = self.estimate_motion(
-            filtered_matches, self.kp_list[-2], self.kp_list[-1]
-        )
-
-        # Create a 4x4 homogeneous transformation matrix
-        self.current_transform = np.eye(4)  # Reset with an identity matrix
-        self.current_transform[:3, :3] = rmat  # Insert the rotation matrix
-        self.current_transform[:3, 3] = tvec.flatten()  # Insert the translation vector
-        self.pose_transform_history.append(self.current_transform)
-
-    def update_transform(self):
-        """
-        Calculates the transformation matrix from initlized point in the robot odom to current pose
-
-        Output:
-        - full_transform: a 4x4 transformation matrix from initial pose to current pose
-        """
-        # prevent live deque updates from interrupting odom calculations
-        # snapshot = list(self.image_deque)
-
-        full_transform = np.eye(4)
-
-        for transform in self.pose_transform_history:
-            full_transform = np.dot(self.combined_transform, transform)
-
-        return full_transform
 
     def publish_visual_pose(self):
         """
         Publish current pose
         """
-        self.update_pose()
-        # print(np.array(self.current_pose))
-        # convert roation to quaternion
-        current_rotation = self.current_pose[:3, :3]
-        # current_rotation = [np.eye(3)]
-        print(current_rotation)
-        quaternion = Rotation.from_matrix(current_rotation).as_quat()
+        rmat = self.posemat[:3, :3]
+        quaternion = Rotation.from_matrix(rmat).as_quat()
 
         # Create and populate the Pose message
-        pose = Pose()
+        pose_msg = PoseStampedSourced()
 
         # Assign position from translation matrix
-        pose.position.x = self.current_pose[0][2]
-        pose.position.y = self.current_pose[1][2]
-        pose.position.z = self.current_pose[2][2]
+        pose_msg.pose.position.x = self.posemat[0][3]
+        pose_msg.pose.position.y = self.posemat[1][3]
+        pose_msg.pose.position.z = self.posemat[2][3]
 
         # Assign orientation from translation matrix
-        pose.orientation.x = quaternion[0]
-        pose.orientation.y = quaternion[1]
-        pose.orientation.z = quaternion[2]
-        pose.orientation.w = quaternion[3]
+        pose_msg.pose.orientation.x = quaternion[0]
+        pose_msg.pose.orientation.y = quaternion[1]
+        pose_msg.pose.orientation.z = quaternion[2]
+        pose_msg.pose.orientation.w = quaternion[3]
 
-        self.pose_pub.publish(pose)
+        # print("PUBLISHING A VISUAL POSE")
+        # print(self.posemat)
+
+        self.pose_pub.publish(pose_msg)
 
     # HELPER FUNCTIONS
     def extract_features(self, image):
@@ -193,19 +278,19 @@ class VisualOdometryNode(Node):
         kp, des = sift.detectAndCompute(image, None)
         return kp, des
 
-    def match_features(des1, des2, dist_threshold=0.6):
+    def match_features(self, des1, des2):
         """
         Match features for each subsequent image pair in the dataset
 
         Arguments:
-        des_list -- a list of descriptors for each image in the dataset
-        dist_threshold -- maximum allowed relative distance between the best matches, (0.0, 1.0)
+        des_1
 
         Returns:
         matches_list -- list of matches for each subsequent image pair in the dataset.
                 Each matches[i] is a list of matched features from images i and i + 1
 
         """
+        dist_threshold=0.6
         matches = []
         filtered_matches = []
 
@@ -221,7 +306,7 @@ class VisualOdometryNode(Node):
 
         return filtered_matches
 
-    def estimate_motion(self, matches, kp1, kp2):
+    def estimate_motion(self, match, kp1, kp2):
         """
         Estimate camera motion from a pair of subsequent image frames
 
@@ -230,31 +315,28 @@ class VisualOdometryNode(Node):
         kp1 -- list of the keypoints in the first image
         kp2 -- list of the keypoints in the second image
 
-        Optional arguments:
-        depth1 -- a depth map of the first frame. This argument is not needed if you use Essential Matrix Decomposition
-
         Returns:
         rmat -- recovered 3x3 rotation numpy matrix
         tvec -- recovered 3x1 translation numpy vector
+        image1_points -- a list of selected match coordinates in the first image. image1_points[i] = [u, v], where u and v are 
+                     coordinates of the i-th match in the image coordinate system
+        image2_points -- a list of selected match coordinates in the second image. image1_points[i] = [u, v], where u and v are 
+                     coordinates of the i-th match in the image coordinate system
         """
-        # rmat = np.eye(3)
-        # tvec = np.zeros((3, 1))
-        # img1_points = []
-        # img2_points = []
+        img1_points = []
+        img2_points = []
 
-        # queryIdx: Index of the keypoint in the first image.
-        # trainIdx: Index of the keypoint in the second image.
-        img1_points = np.array([kp1[m.queryIdx].pt for m in matches])
-        img2_points = np.array([kp2[m.trainIdx].pt for m in matches])
+        img1_points = np.array([kp1[m[0].queryIdx].pt for m in match])
+        img2_points = np.array([kp2[m[0].trainIdx].pt for m in match])
 
         E, _ = cv2.findEssentialMat(
-            img2_points, img1_points, self.focal, self.pp, cv2.RANSAC, 0.999, 1.0, None
+            img2_points, img1_points, self.FOCAL, self.PP, cv2.RANSAC, 0.999, 1.0, None
         )
         _, rmat, tvec, _ = cv2.recoverPose(
-            E, img1_points, img2_points, focal=self.focal, pp=self.pp, mask=None
+            E, img1_points, img2_points, focal=self.FOCAL, pp=self.PP, mask=None
         )
 
-        return rmat, tvec
+        return rmat, tvec, img1_points, img2_points
 
 
 def main(args=None):

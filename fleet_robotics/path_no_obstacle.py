@@ -43,12 +43,13 @@ class PathPlanningNode(Node):
 
         self.obstacle_list = []
         for index, __ in enumerate(self.obstacle_pose_x):
-            self.obstacle_list.append(
-                (self.obstacle_pose_x[index], self.obstacle_pose_y[index])
-            )
+
+            self.obstacle_list.append((self.obstacle_pose_x[index], self.obstacle_pose_y[index]))
+       
         self.obstacle_discrete = []
         for obstacle in self.obstacle_list:
             self.obstacle_discrete.append(self.translate_world_to_discrete(obstacle))
+
 
         # goal status
         self.declare_parameter(
@@ -129,8 +130,8 @@ class PathPlanningNode(Node):
         pose_msg = PoseStampedSourced()
 
         # assign proper world coordinates
-        self.get_logger().info(f"Sending next step: {next_step}")
         world_next_pose = self.translate_discrete_to_world(next_step)
+        self.get_logger().info(f"Sending next step: {world_next_pose}")
         pose_msg.pose.position.x = world_next_pose[0]
         pose_msg.pose.position.y = world_next_pose[1]
 
@@ -153,14 +154,14 @@ class PathPlanningNode(Node):
         """
         grids_around = []
         grids_around_add = [
-            # (-1, 1),
+            (-1, 1),
             (0, 1),
-            # (1, 1),
+            (1, 1),
             (-1, 0),
             (1, 0),
-            # (-1, -1),
+            (-1, -1),
             (0, -1),
-            # (1, -1),
+            (1, -1),
         ]
         for grids in grids_around_add:
             result = tuple(x + y for x, y in zip(current_pose_discrete, grids))
@@ -168,6 +169,10 @@ class PathPlanningNode(Node):
 
         min_distance = float("inf")
         next_pose_discrete = None
+ 
+        obstacle_discrete = []
+        for obstacle in self.obstacle_list:
+            obstacle_discrete.append(self.translate_world_to_discrete(obstacle))
 
         for grid in grids_around:
             if grid not in self.obstacle_discrete:
