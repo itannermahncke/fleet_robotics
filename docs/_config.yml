@@ -26,9 +26,7 @@ nav:
       - name: -- Milestone 1
         link: m1
       - name: -- Milestone 2
-        link: m2
-      - name: -- Milestone 3
-        link: m3       
+        link: m2     
       - name: -- Final
         link: final     
   - name: Galley
