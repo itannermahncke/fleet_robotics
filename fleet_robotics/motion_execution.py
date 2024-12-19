@@ -24,36 +24,47 @@ class MotionExecutionNode(Node):
         """
         super().__init__("motion_execution")
 
-        # bump stop
-        self.create_subscription(Bump, "bump", self.bump_callback, 10)
+        # robot info and status
+        self.declare_parameter("robot_name", rclpy.Parameter.Type.STRING)
+        self.robot_name = (
+            self.get_parameter("robot_name").get_parameter_value().string_value
+        )
+
         # subscribe to the crash handler and the path planner
         self.crash_sub = self.create_subscription(
-            CrashDetection, "step_clearance", self.clearance_callback, 10
+            CrashDetection,
+            f"step_clearance",
+            self.clearance_callback,
+            10,
         )
         self.step_sub = self.create_subscription(
-            PoseStampedSourced, "next_step", self.step_callback, 10
+            PoseStampedSourced, f"next_step", self.step_callback, 10
         )
 
         # subscribe to current pose estimate
         self.pose_sub = self.create_subscription(
-            PoseStampedSourced, "pose_estimate", self.pose_callback, 10
+            PoseStampedSourced,
+            f"pose_estimate",
+            self.pose_callback,
+            10,
         )
         self.latest_pose = None
         self.latest_twist = Twist()
         self.next_step = None
 
         # publish cmd velocities to Neato
-        self.vel_pub = self.create_publisher(Twist, "cmd_vel", 10)
+        self.vel_pub = self.create_publisher(Twist, f"cmd_vel", 10)
         self.pub_timer = self.create_timer(0.05, self.execute_path)
 
         # publish when a step has been completed
-        self.status_pub = self.create_publisher(Bool, "step_status", 10)
+        self.status_pub = self.create_publisher(Bool, f"step_status", 10)
+        self.create_subscription(Bump, f"bump", self.bump_callback, 10)
 
         # attributes
         self.steps: deque[PoseStampedSourced] = deque(maxlen=10)
-        self.max_ang_vel = 0.2
+        self.max_ang_vel = 0.399
         self.max_lin_vel = 0.299
-        self.ang_tol = 0.075
+        self.ang_tol = 0.1
         self.lin_tol = 0.1
 
     def bump_callback(self, bump: Bump):
@@ -86,6 +97,8 @@ class MotionExecutionNode(Node):
                     self.next_step = step
                     self.steps.remove(step)
                     return
+            elif not crash_msg.clearance:
+                self.get_logger().info(f"Bad message {crash_msg.msg_id}, ignoring")
 
     def step_callback(self, pose_msg: PoseStampedSourced):
         """
@@ -111,15 +124,12 @@ class MotionExecutionNode(Node):
 
             # if angle error is significant, correct
             if abs(ang_error) > self.ang_tol:
-                self.get_logger().info(f"Ang error: {ang_error}")
                 twist.angular.z = self.max_ang_vel * ang_error / abs(ang_error)
             # if lin error is significant, correct
             elif abs(lin_error) > self.lin_tol:
-                self.get_logger().info(f"Lin error: {lin_error}")
                 twist.linear.x = self.max_lin_vel * lin_error / abs(lin_error)
             # if within tolerance
             else:
-                self.get_logger().info("No error!")
                 self.status_pub.publish(Bool(data=True))
                 self.next_step = None
 
@@ -144,7 +154,9 @@ class MotionExecutionNode(Node):
             pose.orientation.w,
         )[2]
         lin_error = round(math.sqrt(delta_x**2 + delta_y**2), 4)
-        ang_error = round(math.atan2(delta_y, delta_x) - heading, 4)
+        ang_error = self.normalize_angle(
+            round(math.atan2(delta_y, delta_x) - heading, 4)
+        )
 
         return lin_error, ang_error
 
@@ -167,6 +179,20 @@ class MotionExecutionNode(Node):
         yaw_z = math.atan2(t3, t4)
 
         return [roll_x, pitch_y, yaw_z]  # in radians
+
+    def normalize_angle(self, angle):
+        """
+        Normalize an angle on the range of -pi to pi.
+        """
+        if abs(angle) > 2 * math.pi:
+            angle = angle % 2 * math.pi
+
+        if angle > math.pi:
+            angle = angle - 2 * math.pi
+        elif angle < -1 * math.pi:
+            angle = angle + 2 * math.pi
+
+        return angle
 
 
 def main(args=None):
