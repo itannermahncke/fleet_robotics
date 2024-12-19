@@ -9,6 +9,7 @@ from fleet_robotics_msgs.msg import CrashDetection, PoseStampedSourced
 
 from collections import deque
 import math
+import time
 
 
 class MotionExecutionNode(Node):
@@ -99,6 +100,8 @@ class MotionExecutionNode(Node):
                     return
             elif not crash_msg.clearance:
                 self.get_logger().info(f"Bad message {crash_msg.msg_id}, ignoring")
+                time.sleep(2)
+                self.status_pub.publish(Bool(data=True))
 
     def step_callback(self, pose_msg: PoseStampedSourced):
         """

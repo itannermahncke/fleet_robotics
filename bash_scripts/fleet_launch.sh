@@ -42,8 +42,11 @@ for ip in "${ip_list[@]}"
 do
     gscam_config=${gscam_config_p1}${video_ports[$iter]}${gscam_config_p2}
     (ros2 launch neato_node2 bringup_multi.py host:=$ip robot_name:=${robot_names[iter]} udp_video_port:=${video_ports[iter]} udp_sensor_port:=${sensor_ports[iter]} gscam_config:="${gscam_config}") &
+    sleep 0.5
     (ros2 launch fleet_robotics fleet_member_${num}.launch.py) &
     ((iter++))
     ((num++))
     
 done
+
+echo "BASH SCRIPT FINISHED"

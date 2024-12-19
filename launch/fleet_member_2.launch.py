@@ -43,6 +43,7 @@ def generate_launch_description():
     motion_exe_node = Node(
         package="fleet_robotics",
         executable="motion_execution",
+        parameters=[{"robot_name": robot_name}],
         namespace=robot_name,
     )
     # Implement if we have time

@@ -73,8 +73,8 @@ class CrashHandlingNode(Node):
                     self.generic_step_callback,
                     10,
                 )
-        self.latest_poses = [] * self.num_robots
-        self.latest_steps = [] * self.num_robots
+        self.remote_pose = None
+        self.remote_step = None
 
         # subscribe to local next steps
         self.local_step_sub = self.create_subscription(
@@ -103,14 +103,14 @@ class CrashHandlingNode(Node):
         Callback when any external pose is received.
         """
         # assumes frame_id is robot_name (formatted robotN)
-        self.latest_poses[int(pose_msg.header.frame_id[-1])] = pose_msg
+        self.remote_pose = pose_msg
 
     def generic_step_callback(self, pose_msg: PoseStampedSourced):
         """
         Callback when any external motion step is received.
         """
         # assumes frame_id is robot_name (formatted robotN)
-        self.latest_steps[int(pose_msg.header.frame_id[-1])] = pose_msg
+        self.remote_step = pose_msg
 
     def local_step_callback(self, my_pose_msg: PoseStampedSourced):
         """
@@ -129,22 +129,26 @@ class CrashHandlingNode(Node):
         # check all robot poses/steps
         for robot in range(1, self.num_robots + 1):
             if robot != self.robot_num:
-                remote_pose = self.latest_poses[robot]
-                remote_step = self.latest_steps[robot]
 
-                if remote_pose is not None:
+                if self.remote_pose is not None:
 
                     # if any remote poses are in local step -- execute body crash protocol
-                    if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
-                        self, my_pose_msg, remote_pose
-                    ):
-                        self.crash_reported()
+                    if self.pose_is_recent(
+                        self.remote_pose
+                    ) and self.determine_crash_radius(my_pose_msg, self.remote_pose):
+                        self.get_logger().info(
+                            f"{self.robot_name} detected crash with {self.remote_pose.source_id}'s body"
+                        )
+                        self.crash_reported(my_pose_msg)
                         return
-                if remote_step is not None:
+                if self.remote_step is not None:
+                    self.get_logger().info(
+                        f"{self.robot_name} detected crash with {self.remote_pose.source_id}'s path"
+                    )
                     # if any remote steps are in local step -- note the collision for later
-                    if self.pose_is_recent(remote_step) and self.determine_crash_radius(
-                        my_pose_msg, remote_step
-                    ):
+                    if self.pose_is_recent(
+                        self.remote_step
+                    ) and self.determine_crash_radius(my_pose_msg, self.remote_step):
                         collision_agents.append(robot)
 
         # evaluate the severity of the path crash
@@ -225,6 +229,8 @@ class CrashHandlingNode(Node):
                 header=pose.header, msg_id=pose.msg_id, pose=pose.pose, clearance=False
             )
         )
+        self.remote_pose = None
+        self.remote_step = None
 
     def path_crash_reported(self, pose: PoseStampedSourced, robot_list: list[str]):
         """
@@ -235,7 +241,7 @@ class CrashHandlingNode(Node):
         """
         # currently takes predefined priority
         # no cross-robot comms b/c this logic evaluates predictably across the fleet
-        if self.robot_name[-1] == min(robot_list):
+        if self.robot_name[-1] == str(min(robot_list)):
             self.no_crash_reported(pose)
         else:
             self.crash_reported(pose)
