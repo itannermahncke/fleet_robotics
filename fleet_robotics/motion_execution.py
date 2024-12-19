@@ -99,7 +99,6 @@ class MotionExecutionNode(Node):
         """
         Calculate wheel speeds and publish.
         """
-        self.get_logger().info(f"CURRENT STEP GOAL: {self.next_step}")
         if self.next_step is not None:
             # setup
             step = self.next_step
