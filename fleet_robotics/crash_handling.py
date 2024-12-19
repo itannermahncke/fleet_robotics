@@ -3,7 +3,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 
 from fleet_robotics_msgs.msg import CrashDetection, PoseStampedSourced, TimeSourced
-
+from std_msgs.msg import Int32MultiArray
 from builtin_interfaces.msg import Time as TimeMsg
 from geometry_msgs.msg import PoseStamped
 import rclpy.time
@@ -47,9 +47,11 @@ class CrashHandlingNode(Node):
         self.robot_num = int(self.robot_name[-1])
 
         # access local time and offsets
-        self.create_subscription(TimeMsg, "local_time", self.time_callback, 10)
+        self.create_subscription(TimeSourced, "current_time", self.time_callback, 10)
         self.local_time = None
-        self.create_subscription(TimeMsg, "offsets", self.offset_callback, 10)
+        self.create_subscription(
+            Int32MultiArray, "time_offset", self.offset_callback, 10
+        )
         self.time_offsets = {}
 
         # add as many subscribers as is necessary from other robots
@@ -90,11 +92,11 @@ class CrashHandlingNode(Node):
         self.CRASH_RADIUS = 1.0  # meters
         self.RECENCY_REQ = 5 * 10**9  # nanosec
 
-    def time_callback(self, time: TimeMsg):
+    def time_callback(self, time: TimeSourced):
         """
         Save the latest local time.
         """
-        self.local_time = Time.from_msg(time)
+        self.local_time = time.nanosec
 
     def generic_pose_callback(self, pose_msg: PoseStampedSourced):
         """
@@ -150,7 +152,7 @@ class CrashHandlingNode(Node):
         # greenlight the step
         self.no_crash_reported(my_pose_msg)
 
-    def offset_callback(self, time: TimeSourced):
+    def offset_callback(self, time: Int32MultiArray):
         """
         Callback when an offset between the clocks of a fleet member and the local
         robot is received. Save the value.
@@ -159,7 +161,7 @@ class CrashHandlingNode(Node):
         Negative numbers are behind local time.
         """
         # adds new offsets while overwriting existing ones
-        self.time_offsets[time.source_id] = time.nanosec
+        self.time_offsets = time
 
     def determine_crash_radius(self, local_pose: PoseStamped, remote_pose: PoseStamped):
         """
