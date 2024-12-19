@@ -71,8 +71,9 @@ class PosePlotterNode(Node):
         fig, ax = plt.subplots()
         ax.plot(self.odom_dict["x"], self.odom_dict["y"], "k-")
         # ax.plot(self.visual_dict["x"], self.odom_dict["y"], "b-")
-        ax.plot(self.odom_dict["x"], self.odom_dict["y"], "r-")
-        plt.show()
+        ax.plot(self.ekf_dict["x"], self.ekf_dict["y"], "r-")
+        plt.savefig("~/Downloads/ekf_odom.png")
+        self.get_logger().info("DONE")
 
     def odom(self, odom: Odometry):
         """
