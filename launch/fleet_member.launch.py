@@ -30,7 +30,8 @@ def generate_launch_description():
     )
     vis_odom_node = Node(
         package="fleet_robotics",
-        executable="visual_odom",
+        executable="odom_adapter",
+        parameters=[fleet_info],
         namespace=robot_name,
     )
     path_plan_node = Node(

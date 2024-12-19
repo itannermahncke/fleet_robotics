@@ -9,6 +9,7 @@ from fleet_robotics_msgs.msg import PoseStampedSourced
 class PathPlanningNode(Node):
     def __init__(self):
         super().__init__("path_planning")
+        self.get_logger().info("TEST")
 
         # robot info and status
         self.declare_parameter("robot_name", rclpy.Parameter.Type.STRING)
@@ -44,12 +45,13 @@ class PathPlanningNode(Node):
         self.obstacle_list = []
         for index, __ in enumerate(self.obstacle_pose_x):
 
-            self.obstacle_list.append((self.obstacle_pose_x[index], self.obstacle_pose_y[index]))
-       
+            self.obstacle_list.append(
+                (self.obstacle_pose_x[index], self.obstacle_pose_y[index])
+            )
+
         self.obstacle_discrete = []
         for obstacle in self.obstacle_list:
             self.obstacle_discrete.append(self.translate_world_to_discrete(obstacle))
-
 
         # goal status
         self.declare_parameter(
@@ -109,6 +111,7 @@ class PathPlanningNode(Node):
         Callback function that occurs when the motion_execution node is ready
         to receive its next step.
         """
+        self.get_logger().info("NEW STEP!")
         # Translate poses and calculate next step
         if self.current_pose is not None:
             discrete_current = self.translate_world_to_discrete(self.current_pose)
@@ -169,7 +172,7 @@ class PathPlanningNode(Node):
 
         min_distance = float("inf")
         next_pose_discrete = None
- 
+
         obstacle_discrete = []
         for obstacle in self.obstacle_list:
             obstacle_discrete.append(self.translate_world_to_discrete(obstacle))
