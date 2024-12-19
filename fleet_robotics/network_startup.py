@@ -32,6 +32,7 @@ class NetworkStartupNode(Node):
         self.robot_name = (
             self.get_parameter("robot_name").get_parameter_value().string_value
         )
+        # Creating attributes for the node, to be used throughout the node
         self.robot_num = int(self.robot_name[-1])
         self.good_comms = [False] * self.num_robots
         self.good_comms[self.robot_num - 1] = True
@@ -47,7 +48,7 @@ class NetworkStartupNode(Node):
         self.has_tested_time_offset = False
         self.sent_offset_message = False
 
-        # Test Publisher
+        # Test Publisher, for debugging. Echo the /test_pub topic in terminal for outputs
         self.test_pub = self.create_publisher(String, "/test_pub", 10)
         self.test_pub.publish(
             String(
@@ -55,6 +56,7 @@ class NetworkStartupNode(Node):
             )
         )
 
+        # Create publishers for all topics
         self.speaker = self.create_publisher(String, "speak", 10)
         self.listner = self.create_publisher(String, "heard", 10)
         self.comm_check = self.create_publisher(String, "comm_check", 10)
@@ -62,6 +64,7 @@ class NetworkStartupNode(Node):
         self.start_nodes = self.create_publisher(Empty, "start_node", 10)
         self.time_offset = self.create_publisher(Int32MultiArray, "time_offset", 10)
 
+        # For loop to create subscribers for all the robots
         for num in range(1, self.num_robots + 1):
             if self.robot_num == 1 and num == 1:
                 self.timer_starter = self.create_publisher(String, "start_timer", 10)
@@ -102,13 +105,17 @@ class NetworkStartupNode(Node):
                     String, "/robot1/start_timer", self.start_timer_callback, 10
                 )
 
+        # Set up the Timer for the internal running of this node
         timer_period = 0.2
         self.run_timer = self.create_timer(timer_period, self.run)
+
+        # Give all robots a few seconds to finish the subscriber creation, then Publish the first Call message
         time.sleep(3)
         self.speaker.publish(String(data=f"robot {self.robot_num} speaking"))
 
     def run(self):
 
+        # Check to see if all robots have good communication before moving on to the timers
         if all(x for x in self.good_comms) and self.good_comms_message == False:
             self.test_pub.publish(
                 String(data=f"{self.robot_name} passed first run loop if statement")
@@ -120,12 +127,6 @@ class NetworkStartupNode(Node):
             )
 
         if self.robot_num == 1 and self.good_comms_message == True:
-            # self.test_pub.publish(
-            #     String(
-            #         data=f"passed robot_num == 1 -- {self.robots_good_comms} -- {self.robot_good_comms_message}"
-            #     )
-            # )
-
             if (
                 all(x for x in self.robots_good_comms)
                 and self.robot_good_comms_message == False
@@ -138,18 +139,29 @@ class NetworkStartupNode(Node):
                 self.timer_starter.publish(String(data="Start"))
 
     def speak_callback(self, msg: String):
+        """
+        Callback function for the speak topic.
+        Once the callback fires, the robot publishes a message saying that it heard the robot
+        """
         self.test_pub.publish(String(data=f"in speak_callback: {msg.data}"))
         self.listner.publish(
             String(data=f"robot {self.robot_num} heard robot {msg.data[6]}")
         )
 
     def heard_callback(self, msg: String):
+        """
+        Callback function for the heard topic.
+        Once the callback fires, the robot updates its communication status
+        """
         self.test_pub.publish(String(data=f"in heard_callback: {msg.data}"))
         good_comm_robot = int(msg.data[6]) - 1
         self.good_comms[good_comm_robot] = True
 
     def comm_check_callback(self, msg: String):
-
+        """
+        Callback function for the comm_check topic.
+        Once the callback fires, robot1 can move on to coordinating timers.
+        """
         robot_good_comm = int(msg.data[6]) - 1
 
         self.robots_good_comms[robot_good_comm] = True
@@ -160,6 +172,10 @@ class NetworkStartupNode(Node):
         )
 
     def start_timer_callback(self, msg: String):
+        """
+        Callback function for the start_timer topic.
+        Once the callback fires, all robots will start their timers.
+        """
         self.test_pub.publish(String(data=msg.data))
         if msg.data == "Start":
             # start timers
@@ -169,6 +185,10 @@ class NetworkStartupNode(Node):
             self.start_time = (x[0] * (10**9)) + x[1]
 
     def current_time_callback(self):
+        """
+        Callback function for all the timers.
+        This will run indefinetly, sending all robots its current time
+        """
         x = self.get_clock().now().seconds_nanoseconds()
         self.time_current = ((x[0] * (10**9)) + x[1]) - self.start_time
         self.time_counter += 1
@@ -176,10 +196,13 @@ class NetworkStartupNode(Node):
         send_time._source_id = self.robot_name
         send_time.msg_id = str(self.time_counter)
         send_time.nanosec = int((self.time_current) / 10**3)
-        # self.test_pub.publish(String(data=f"current time {send_time.nanosec}"))
         self.current_time.publish(send_time)
 
     def test_time_offset_callback(self, msg: TimeSourced):
+        """
+        Callback function for the current_time topic.
+        This will run once, and calculate the difference in time between all robots, then publish that difference.
+        """
         source_robot = msg.source_id
         msg_num = int(msg.msg_id)
         robot_time_nano = msg.nanosec
