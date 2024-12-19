@@ -28,10 +28,10 @@ def generate_launch_description():
         parameters=[fleet_info, {"robot_name": robot_name}],
         namespace=robot_name,
     )
-    vis_odom_node = Node(
+    wheel_odom_node = Node(
         package="fleet_robotics",
         executable="odom_adapter",
-        parameters=[fleet_info],
+        parameters=[fleet_info, {"robot_name": robot_name}],
         namespace=robot_name,
     )
     path_plan_node = Node(
@@ -61,7 +61,7 @@ def generate_launch_description():
             name_of_robot,
             number_of_robots,
             net_start_node,
-            vis_odom_node,
+            wheel_odom_node,
             path_plan_node,
             crash_handle_node,
             motion_exe_node,

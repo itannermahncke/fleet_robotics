@@ -114,14 +114,12 @@ class ExtendedKalmanFilterNode(Node):
         message = PoseStampedSourced()
 
         # cartesian
-        self.get_logger().info(f"Type: {type(state[(0,0)])}")
         message.pose.position.x = state[(0, 0)]
         message.pose.position.y = state[(1, 0)]
 
         # do the angle stuff
         normal_angle = self.normalize_angle(state[(2, 0)])
         quat = self.quaternion_from_euler(0, 0, normal_angle)
-        self.get_logger().info(f"Type: {type(quat[0])}")
         message.pose.orientation.x = quat[0]
         message.pose.orientation.y = quat[1]
         message.pose.orientation.z = quat[2]
@@ -145,7 +143,6 @@ class ExtendedKalmanFilterNode(Node):
             F: State transition matrix, which is where the linearizing happens.
             Q: Noise; in this case, discrete white noise.
         """
-        self.get_logger().info(f"F shape: {F.shape}, x shape: {x.shape}")
         xt = F @ x
         Pt = F @ P @ F.T + Q
         return xt, Pt
@@ -163,24 +160,15 @@ class ExtendedKalmanFilterNode(Node):
         """
         # Kalman Gain
         S = H @ P @ H.T + R
-        self.get_logger().info(f"S: {str(S)}")
-        self.get_logger().info(f"P shape: {str(P.shape)}")
-        self.get_logger().info(f"H shape: {str(H.shape)}")
         K = P @ H.T @ linalg.inv(S)
-        self.get_logger().info(f"Kalman Gain: {K}")
 
         # Residual, represents data that was lost
         y = z - H @ x
-        self.get_logger().info(f"Residual: {y}")
-
-        self.get_logger().info(f"State vector prediction: {x}")
 
         # update state and filter covariance
         ky = K @ y
-        self.get_logger().info(f"K @ y: {ky}")
         x += ky
         P = P - K @ H @ P
-        self.get_logger().info(f"STATE VECTOR: {x}\nCOVARIANCE: {P}")
         return x, P
 
     def make_white_noise(self, dt, var):
