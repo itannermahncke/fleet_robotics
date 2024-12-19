@@ -20,21 +20,25 @@ def generate_launch_description():
         package="fleet_robotics",
         executable="network_startup",
         parameters=[fleet_info, {"robot_name": robot_name}],
+        namespace=robot_name,
     )
     wheel_odom_node = Node(
         package="fleet_robotics",
         executable="odom_adapter",
         parameters=[fleet_info, {"robot_name": robot_name}],
+        namespace=robot_name,
     )
     path_plan_node = Node(
         package="fleet_robotics",
         executable="path_planning",
         parameters=[fleet_info, map_config, {"robot_name": robot_name}],
+        namespace=robot_name,
     )
     crash_handle_node = Node(
         package="fleet_robotics",
         executable="crash_handling",
         parameters=[fleet_info, {"robot_name": robot_name}],
+        namespace=robot_name,
     )
     motion_exe_node = Node(
         package="fleet_robotics",
