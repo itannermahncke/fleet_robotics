@@ -127,22 +127,25 @@ class CrashHandlingNode(Node):
         collision_agents = [self.robot_name]
 
         # check all robot poses/steps
-        for robot in range(1, self.num_robots):
+        for robot in range(1, self.num_robots + 1):
             if robot != self.robot_num:
                 remote_pose = self.latest_poses[robot]
                 remote_step = self.latest_steps[robot]
 
-                # if any remote poses are in local step -- execute body crash protocol
-                if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
-                    self, my_pose_msg, remote_pose
-                ):
-                    self.crash_reported()
-                    return
-                # if any remote steps are in local step -- note the collision for later
-                elif self.pose_is_recent(remote_step) and self.determine_crash_radius(
-                    my_pose_msg, remote_step
-                ):
-                    collision_agents.append(robot)
+                if remote_pose is not None:
+
+                    # if any remote poses are in local step -- execute body crash protocol
+                    if self.pose_is_recent(remote_pose) and self.determine_crash_radius(
+                        self, my_pose_msg, remote_pose
+                    ):
+                        self.crash_reported()
+                        return
+                if remote_step is not None:
+                    # if any remote steps are in local step -- note the collision for later
+                    if self.pose_is_recent(remote_step) and self.determine_crash_radius(
+                        my_pose_msg, remote_step
+                    ):
+                        collision_agents.append(robot)
 
         # evaluate the severity of the path crash
         if len(collision_agents) > 1:
@@ -191,18 +194,19 @@ class CrashHandlingNode(Node):
             True if a pose is within a certain recency threshold.
             False if this is not the case.
         """
-        # determine origin robot of pose stamped
-        origin = pose.source_id
+        # # determine origin robot of pose stamped
+        # origin = pose.source_id
 
-        # find offset between remote and local time
-        offset = self.time_offsets[origin]
+        # # find offset between remote and local time
+        # offset = self.time_offsets[origin]
 
-        # figure out when pose was actually sent using offset
-        source_time = Time.from_msg(pose.stamp)
-        actual_time = source_time + offset
+        # # figure out when pose was actually sent using offset
+        # source_time = Time.from_msg(pose.stamp)
+        # actual_time = source_time + offset
 
-        ## return true/false if over a threshold
-        return abs(actual_time - self.local_time) < self.RECENCY_REQ
+        # ## return true/false if over a threshold
+        # return abs(actual_time - self.local_time) < self.RECENCY_REQ
+        return True
 
     def crash_reported(self, pose: PoseStampedSourced):
         """

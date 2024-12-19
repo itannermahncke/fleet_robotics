@@ -2,16 +2,16 @@
   ros__parameters:
     num_robots: 2
     robot1_goal:
-    - 0.75
-    - 1.25
+    - 1.75
+    - 1.75
     robot1_initial_pose:
     - 0.0
     - 0.0
     - 0.0
     robot2_goal:
-    - 1.25
+    - 0.25
     - 1.75
     robot2_initial_pose:
-    - 1.0
+    - 1.5
     - 0.0
     - 0.0
