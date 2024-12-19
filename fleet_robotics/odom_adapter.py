@@ -24,6 +24,16 @@ class OdometryAdapterNode(Node):
             self.get_parameter("robot_name").get_parameter_value().string_value
         )
 
+        # grab the offset
+        self.declare_parameter(
+            f"{self.robot_name}_initial_pose", rclpy.Parameter.Type.DOUBLE_ARRAY
+        )
+        self.initial_pose = (
+            self.get_parameter(f"{self.robot_name}_initial_pose")
+            .get_parameter_value()
+            .double_array_value
+        )
+
         # subscribe to pose estimates
         self.odom_sub = self.create_subscription(
             Odometry, "odom", self.odom_callback, 10
@@ -41,6 +51,8 @@ class OdometryAdapterNode(Node):
         pose_msg = PoseStampedSourced()
         pose_msg.header = odom_msg.header
         pose_msg.pose = odom_msg.pose.pose
+        pose_msg.pose.position.x += self.initial_pose[0]
+        pose_msg.pose.position.y += self.initial_pose[1]
 
         # maintain unique messages
         pose_msg.msg_id = str(self.msg_id_counter)
