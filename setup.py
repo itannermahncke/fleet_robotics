@@ -31,6 +31,7 @@ setup(
             "path_planning = fleet_robotics.path_no_obstacle:main",
             "motion_execution = fleet_robotics.motion_execution:main",
             "pose_plotter = fleet_robotics.pose_plotter:main",
+            "pose_listener = fleet_robotics.pose_listener:main"
         ],
     },
 )
