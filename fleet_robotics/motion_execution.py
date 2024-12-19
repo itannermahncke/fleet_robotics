@@ -26,8 +26,6 @@ class MotionExecutionNode(Node):
 
         # bump stop
         self.create_subscription(Bump, "bump", self.bump_callback, 10)
-        # bump stop
-        self.create_subscription(Bump, "bump", self.bump_callback, 10)
         # subscribe to the crash handler and the path planner
         self.crash_sub = self.create_subscription(
             CrashDetection, "step_clearance", self.clearance_callback, 10
@@ -59,14 +57,11 @@ class MotionExecutionNode(Node):
         self.lin_tol = 0.1
 
     def bump_callback(self, bump: Bump):
-        if bump.left_front or bump.left_side or bump.right_front or bump._right_side:
-            self.vel_pub.publish(Twist())
-            self.pub_timer.destroy()
-
-    def bump_callback(self, bump: Bump):
-        if bump.left_front or bump.left_side or bump.right_front or bump._right_side:
-            self.vel_pub.publish(Twist())
-            self.pub_timer.destroy()
+        if bump.left_front or bump.left_side or bump.right_front or bump.right_side:
+            pass
+            # self.get_logger().info("BUMP STOP, SHUTTING DOWN MOTION")
+            # self.vel_pub.publish(Twist())
+            # self.pub_timer.destroy()
 
     def pose_callback(self, pose_msg: PoseStampedSourced):
         """
@@ -104,6 +99,7 @@ class MotionExecutionNode(Node):
         """
         Calculate wheel speeds and publish.
         """
+        self.get_logger().info(f"CURRENT STEP GOAL: {self.next_step}")
         if self.next_step is not None:
             # setup
             step = self.next_step
@@ -171,7 +167,7 @@ class MotionExecutionNode(Node):
         t4 = +1.0 - 2.0 * (y * y + z * z)
         yaw_z = math.atan2(t3, t4)
 
-        return roll_x, pitch_y, yaw_z  # in radians
+        return [roll_x, pitch_y, yaw_z]  # in radians
 
 
 def main(args=None):

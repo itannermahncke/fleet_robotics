@@ -50,7 +50,7 @@ def generate_launch_description():
                     ("step_clearance", f"{name_str}/step_clearance"),
                     ("pose_estimate", f"{name_str}/pose_estimate"),
                     ("next_step", f"{name_str}/next_step"),
-                    ("next_step", f"{name_str}/step_status"),
+                    ("step_status", f"{name_str}/step_status"),
                 ],
             ),
         ]

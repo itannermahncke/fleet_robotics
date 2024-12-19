@@ -3,6 +3,6 @@
     grid_width: 2
     grid_height: 5
     square_size: 0.5
-    obstacle_x: [0.75, 0.75]
-    obstacle_y: [0.75, 1.25]
+    obstacle_x: [0.75]
+    obstacle_y: [0.75]
 
