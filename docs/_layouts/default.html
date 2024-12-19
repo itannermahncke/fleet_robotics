@@ -4,19 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ page.title | escape }}</title>
-  <link rel="stylesheet" href="{{ '/assets/main.css' | relative_url }}">
   <style>
-    /* Add styles for the dropdown */
+    /* General link styles */
+    a {
+      color: #007bff; /* Set default link color */
+      text-decoration: none; /* Remove underline from all links */
+    }
+  
+    a:hover {
+      text-decoration: underline; /* Add underline on hover */
+    }
+  
+    /* Sidebar styles */
     .sidebar {
       width: 200px;
       background-color: #f4f4f4;
       padding: 10px;
+      position: fixed;
+      top: 50px; /* Adjust to leave space for the navbar */
+      left: 0;
+      bottom: 0; /* Extend sidebar to the bottom of the page */
+      height: auto;
+      overflow-y: auto; /* Add scrolling if content overflows */
     }
-
+  
+    .sidebar ul {
+      padding: 0;
+      list-style-type: none; /* Remove default list styling */
+    }
+  
+    .sidebar ul li {
+      margin: 10px 0;
+    }
+  
+    .sidebar ul li a {
+      color: #333; /* Default sidebar link color */
+      text-decoration: none; /* Remove underline from sidebar links */
+      display: block; /* Make links fill the list item */
+      padding: 5px 10px;
+    }
+  
+    .sidebar ul li a:hover {
+      text-decoration: underline; /* Add underline on hover */
+    }
+  
+    /* Dropdown styles */
     .dropdown {
-      position: relative; /* Keep this as relative */
+      position: relative; 
     }
-
+  
     /* Dropdown content starts hidden */
     .dropdown-content {
       display: none; /* Hidden by default */
@@ -24,31 +60,71 @@
       padding-left: 20px;
       background-color: #f9f9f9;
       border: 1px solid #ddd;
-      margin-top: 5px; /* Optional: Add some spacing between parent and dropdown */
+      margin-top: 5px; /* Add some spacing between parent and dropdown */
     }
-
+  
     /* Style dropdown items */
     .dropdown-content li {
       padding: 5px 10px;
     }
-
+  
     /* Show dropdown on hover */
     .dropdown:hover .dropdown-content {
       display: block; /* Display the dropdown */
     }
-
+  
     /* Dropdown links */
     .dropdown-content li a {
-      text-decoration: none;
       color: #333;
+      text-decoration: none;
     }
-
+  
     .dropdown-content li a:hover {
       text-decoration: underline;
     }
-  </style>
+  
+    /* Styles for the navigation bar */
+    nav {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 0;
+      text-align: center;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+    }
+
+    .larger-link {
+      font-size: 20px;
+      font-weight: bold;
+    }
+  
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 0 15px;
+    }
+  
+    nav a:hover {
+      text-decoration: underline;
+    }
+  
+    /* Content Section */
+    .content {
+      margin-top: 60px; /* Leave space for the navbar */
+      margin-left: 210px; /* Leave space for the sidebar */
+      padding: 20px;
+    }
+  </style>  
 </head>
 <body>
+  <!-- Navigation Bar Section -->
+  <nav>
+    <a href="/fleet_robotics" class="larger-link">Fleet Robotics</a>
+  </nav>
+  
   <!-- Sidebar Section -->
   <div class="sidebar">
     <ul>
