@@ -30,6 +30,7 @@ setup(
             "crash_handling = fleet_robotics.crash_handling:main",
             "path_planning = fleet_robotics.path_no_obstacle:main",
             "motion_execution = fleet_robotics.motion_execution:main",
+            "pose_plotter = fleet_robotics.pose_plotter:main",
         ],
     },
 )
