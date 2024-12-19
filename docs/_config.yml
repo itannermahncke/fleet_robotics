@@ -37,4 +37,6 @@ nav:
     link: team
   - name: Ethics
     link: ethics
+  - name: GitHub
+    link: https://github.com/itannermahncke/fleet_robotics
 
