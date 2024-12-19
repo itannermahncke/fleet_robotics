@@ -12,6 +12,8 @@ from geometry_msgs.msg import Transform, Pose, PoseStamped
 from sensor_msgs.msg import Image, CompressedImage
 
 
+from fleet_robotics_msgs.msg import PoseStampedSourced
+
 from typing import List
 
 import requests
@@ -89,7 +91,7 @@ class VisualOdometryNode(Node):
         self.image_sub = self.create_subscription(
             CompressedImage, "camera/image_raw/compressed", self.img_callback,10
         )
-        self.pose_pub = self.create_publisher(PoseStamped, "visual_pose", 10)
+        self.pose_pub = self.create_publisher(PoseStampedSourced, "visual_pose", 10)
 
         # temp variables
         self.latest_pose = np.eye(4)
@@ -241,7 +243,7 @@ class VisualOdometryNode(Node):
         quaternion = Rotation.from_matrix(rmat).as_quat()
 
         # Create and populate the Pose message
-        pose_msg = PoseStamped()
+        pose_msg = PoseStampedSourced()
 
         # Assign position from translation matrix
         pose_msg.pose.position.x = self.posemat[0][3]
