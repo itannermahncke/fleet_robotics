@@ -7,8 +7,6 @@ filename: index.md
 ## Fall 2024 Intro to Computational Robotics Final Project
 ### Contributors: Ivy, Vivian, Ariel, Charlie
 
-<img src="assets/m3_diagram.png" width="1000px">
-
 # Abstract
 This project aims to develop and implement a decentralized path planning system for an arbitrarily-sized fleet of robots.
 We integrate sensor fusion techniques, multi-agent communication, and greedy path planning for a fully autonomous fleet navigation system.
@@ -25,3 +23,5 @@ end of the demo, both robots reach their goals without colliding!
 
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/l7JHn1P49_8?si=QmKHv_wa8TMfYRXa" title="Single Neato Path Planning" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+<img src="assets/m3_diagram.png" width="750">
