@@ -6,7 +6,7 @@ filename: team.md
 
 # Meet the Team!
 
-![Team Pic](assets/Team_Pic.jpg)
+<img src="assets/Team_Pic.jpg" alt="The Team Pic" width="1000px">
 
 <br>
 
