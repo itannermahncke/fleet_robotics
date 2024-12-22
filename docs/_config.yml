@@ -14,7 +14,7 @@ nav:
   - name: System
     link: system
     subitems:
-      - name: Launch
+      - name: Launch and Network
         link: launch
       - name: Path Planning
         link: path_planning
