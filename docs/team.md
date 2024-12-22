@@ -36,4 +36,4 @@ All of our research and design decisions related to path planning, especially th
 ### Learning Goals:
 Dive deeply into sensor fusion and get the chance to implement an Extended Kalman Filter. Also, explore path planning in an applied context.
 ### I Worked On:
-Design and logic behind the crash handling system, researching sensor fusion and EKFs, and performing the role of Project Manager!
+Design and logic behind the crash handling system, researching sensor fusion and EKFs, writing custom message types, and performing the role of Project Manager!
