@@ -3,8 +3,8 @@ title: Home
 layout: default
 filename: index.md
 --- 
-# Fleet Robotics
-## Fall 2024: Intro to Computational Robotics Final Project
+# Fleet Robotics: A Decentralized Path Planning and State Estimation System 
+## Fall 2024 Intro to Computational Robotics Final Project
 ### Contributors: Ivy, Vivian, Ariel, Charlie
 
 <img src="assets/m3_diagram.png" width="1000px">
