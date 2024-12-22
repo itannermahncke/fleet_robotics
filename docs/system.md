@@ -7,14 +7,14 @@ filename: system.md
 
 For the general outline of our system, We have a diagram that lays out the communication between sections
 
-<img src="assets/m2_diagram.png" alt="System Diagram" width="1000px">
+<img src="assets/m3_diagram.png" alt="System Diagram" width="1000px">
 
-In this diagram, you can see that there are 2 main sections:
+In this diagram, you can see that there are 3 main sections:
 - Path Planning
     - Contains the path planner, Neato Driver, and crash handler
 - State Estimation
     - Contains our sensor fusion and Visual odom
+- Neato Network Communication
+    - Contains the network startup functionality, and inter-fleet message-passing
 
-We also have the outside Neato network communicating into the crash handler, and getting commands from the sensor fusion and the path planner. We also have the physical Neato getting commands from the driver, and communicating to the components of the state estimation section. 
-
-On the sidebar, in the dropdown under 'System', you will find the main components of the project. 
+This software system interfaces with a physical vaccuum robot that we will occasionally refer to as a "Neato", which passes our software system sensor data while receiving motor commands. To learn more about each piece, check out the pages under "System"!
