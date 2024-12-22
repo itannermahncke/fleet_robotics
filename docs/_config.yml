@@ -14,14 +14,12 @@ nav:
   - name: System
     link: system
     subitems:
-      - name: Sensor Fusion
-        link: sensor_fusion
       - name: Launch
         link: launch
       - name: Path Planning
         link: path_planning
-      - name: Visual Odometry
-        link: vis_odom
+      - name: State Estimation
+        link: state_estimation
   - name: Progress
     link: progress
     subitems:
@@ -31,7 +29,7 @@ nav:
         link: m2     
       - name: -- Final
         link: final     
-  - name: Galley
+  - name: Gallery
     link: gallery
   - name: Team
     link: team
