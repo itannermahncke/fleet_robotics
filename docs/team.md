@@ -8,6 +8,7 @@ filename: team.md
 
 ![Team Pic](assets/Team_Pic.jpg)
 
+<br>
 
 ## Vivian Mak
 ![Vivian Pic](assets/Vivian_Pic.jpg)
