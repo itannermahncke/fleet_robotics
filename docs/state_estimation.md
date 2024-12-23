@@ -19,7 +19,36 @@ All in all, while odometry-based state estimation was a useful stand-in for accu
 any long-term state estimation. However, it could be a useful tool when paired with another sensor that provided intermediate, highly accurate
 estimates, such as a GPS system or visual landmark detection.
 
-## Visual Odometry
+## Monocular Visual Odometry
+
+The goal of the Visual Odometry Node is to provide a pose estimate of the Neato through a singular camera mounted in the front. This data will feed into an extended kalman filter in the Sensor Fusion Node which combines internal odometry with the visual odometry to generate a more accurate pose estimate.
+
+One of the biggest issues we ran into was creating depth maps for motion estimation. Depth maps require to sensors (usually a stereo camera) where the baseline distance is known, therefore being able to extract the depth. However with only one camera, we turned to the method of extracting a rotation and translation matrix from an essential matrix decompostiion. The finalized pipeline is as follows:
+
+### MVO Pipeline
+- Calibrate Neato camera to get the camera intrinsic matrix
+- Image is received from the Neato every 1 second
+- SIFT feature extraction
+- FLANN-based feature matching and filtered good matches by distance
+- Estimate motion with essential matrix decomposition
+- Publish a pose 
+
+### Calibration
+Once this pipeline was able to produce a pose, the next step was to calibrate it on the actual Neato. One of the first problems we noticed was the inconsistency as it travels the positive x axis. Testing consisted of manually pushing the Neato 0.5m every 6 seconds and compared the recorded distance to the real distance. (A velocity of 0.083 m/s was just a magic number that worked the best with mathcing features between each frame.) 
+
+Below is a graph showing the differnces in the outputed X pose (in red) compared to each 0.5m in real life (in blue). There was a huge inconsistency in the output scaling and positive/negative sign for each test which seemed very unrealiable.
+
+The first 8 test we performed used `cv2.recoverPose()` to extract the rotation and translation. In the second set of tests, we tried directly implementing the single value decomposition math to extract the matrices. With the random spikes, we decided to continue with the OpenCV function. The next step to extracting out the correct translation is to compute the scale in each image. Using this function has a certain scale ambiguity that we cannot control.
+
+![Calibration for X](assets/calibration_x.png)
+
+The second set of calibration tests we performed was with the rotation matrix. Unlike the translation, this yielded very accurate results over time. In this calibration test, the real angle and computed angles were measured every 45 degrees going from 0 to 180 degrees clockwise and counter-clockwise. In the graph below, blue represents the manual movement of turning and the red is the output. The initial 45-90 degrees were very inaccurate as the estimation motion would always be significantly lower. However, as the Neato reaches 180 degrees, the angles would adjust to be more accurate, usually settling within 10 degrees.
+
+![Calibration for Rotation](assets/calibration_rotation.png)
+
+### Concluding Thoughts
+
+In the end, the pose estimate from monocular visual odometry was not implementing due to the inaccuracy and time constriants. Something that would be super helpful would be to create more visualizations of the differnt steps for easier debugging, ie drawing out the epipolar lines and using Rvis to show how the poses change.
 
 ## Sensor Fusion Via Extended Kalman Filter
 
