@@ -7,7 +7,7 @@ filename: index.md
 ## Fall 2024 Intro to Computational Robotics Final Project
 ### Contributors: Ivy, Vivian, Ariel, Charlie
 
-# Abstract
+## Abstract
 This project aims to develop and implement a decentralized path planning system for an arbitrarily-sized fleet of robots.
 We integrate sensor fusion techniques, multi-agent communication, and greedy path planning for a fully autonomous fleet navigation system.
 
