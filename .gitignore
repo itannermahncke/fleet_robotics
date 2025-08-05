@@ -1,0 +1,4 @@
+test/
+resource/
+fleet_robotics/__pycache__/
+.vscode/
